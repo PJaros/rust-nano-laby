@@ -65,7 +65,62 @@ impl Laby {
         };
         li
     }
+
+    pub fn generate(&mut self, rng: &mut impl Rng) {
+        for i in 0..MAX_ARR_SIZE {
+            self.arr[i] = 0;
+        }
+        for y in 1..self.size_y + 1 {
+            for x in 1..self.size_x + 1 {
+                self.arr[(x + y * self.real_x) as usize] = 1; 
+            }
+        }
+        let mut jump_pos = [0_usize; MAX_POS_SIZE];
+        let mut jump_num = 0_i32;
+        let mut pos: isize = 2 + 2 * self.real_x;     
+        self.arr[pos as usize] = 0;
+    
+        loop {
+            loop {
+                let mut avai_dir = [0_isize; 4];
+                let mut avai_found = 0_usize;
+                for i in 0..self.dirs.len() {
+                    let dir = self.dirs[i];
+                    let look_pos = (pos + 2 * dir) as usize;
+                    if self.arr[look_pos] != 0 {
+                        avai_dir[avai_found] = dir;
+                        avai_found += 1;
+                    }
+                }
+    
+                let dir = match avai_found {
+                    0 => {break;},
+                    1 => avai_dir[0],
+                    _ => {
+                        let slot = rng.gen_range(0..=avai_found);
+                        avai_dir[slot]
+                    }
+                };
+                jump_pos[jump_num as usize] = pos as usize;
+                jump_num += 1;
+    
+                for _ in 0..2 {
+                    pos += dir;
+                    self.arr[pos as usize] = 0;
+                }
+            }
+            match jump_num {
+                0 => {break;}
+                _ => {
+                    jump_num -= 1;
+                    pos = jump_pos[jump_num as usize] as isize;
+                }
+            }
+        }
+        self.arr[(self.size_x - 1 + self.real_x * self.size_y) as usize] = 0;    
+    }
 }
+
 #[arduino_hal::entry]
 fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
@@ -90,58 +145,8 @@ fn main() -> ! {
     ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
     let mut li = Laby::new(19, 19);
-    for i in 0..MAX_ARR_SIZE {
-        li.arr[i] = 0;
-    }
-    for y in 1..li.size_y + 1 {
-        for x in 1..li.size_x + 1 {
-            li.arr[(x + y * li.real_x) as usize] = 1; 
-        }
-    }
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap();
-    let mut jump_pos = [0_usize; MAX_POS_SIZE];
-    let mut jump_num = 0_i32;
-    let mut pos: isize = 2 + 2 * li.real_x;     
-    li.arr[pos as usize] = 0;
-
-    loop {
-        loop {
-            let mut avai_dir = [0_isize; 4];
-            let mut avai_found = 0_usize;
-            for i in 0..li.dirs.len() {
-                let dir = li.dirs[i];
-                let look_pos = (pos + 2 * dir) as usize;
-                if li.arr[look_pos] != 0 {
-                    avai_dir[avai_found] = dir;
-                    avai_found += 1;
-                }
-            }
-
-            let dir = match avai_found {
-                0 => {break;},
-                1 => avai_dir[0],
-                _ => {
-                    let slot = rng.gen_range(0..=avai_found);
-                    avai_dir[slot]
-                }
-            };
-            jump_pos[jump_num as usize] = pos as usize;
-            jump_num += 1;
-
-            for _ in 0..2 {
-                pos += dir;
-                li.arr[pos as usize] = 0;
-            }
-        }
-        match jump_num {
-            0 => {break;}
-            _ => {
-                jump_num -= 1;
-                pos = jump_pos[jump_num as usize] as isize;
-            }
-        }
-    }
-    li.arr[(li.size_x - 1 + li.real_x * li.size_y) as usize] = 0;
+    li.generate(&mut rng);
 
     for y in 1..li.size_y + 1 {
         for x in 1..li.size_x + 1 {
@@ -154,37 +159,6 @@ fn main() -> ! {
         }
         ufmt::uwriteln!(&mut serial, "\r").unwrap(); 
     }
-    // let mut dxy = [0_u8; 4];
-    // for y in (1..li.size_y + 1).step_by(2) {
-    //     for x in (1..li.size_x + 1).step_by(2) {
-    //         let pos = (x + y * li.real_x) as isize;
-    //         for i in 0..li.dirs.len() {
-    //             dxy[i] = li.arr[(pos + li.dirs[i]) as usize];
-    //         }
-    //         let c = match dxy {
-    //             [0, 0, 0, 0] => ' ',
-    //             [0, 0, 0, _] => '╷',
-    //             [0, 0, _, 0] => '╶',
-    //             [0, 0, _, _] => '┌',
-    //             [0, _, 0, 0] => '╴',
-    //             [0, _, 0, _] => '┐',
-    //             [0, _, _, 0] => '─',
-    //             [0, _, _, _] => '┬',
-    //             [_, 0, 0, 0] => '╵',
-    //             [_, 0, 0, _] => '│',
-    //             [_, 0, _, 0] => '└',
-    //             [_, 0, _, _] => '├',
-    //             [_, _, 0, 0] => '┘',
-    //             [_, _, 0, _] => '┤',
-    //             [_, _, _, 0] => '┴',
-    //             [_, _, _, _] => '┼',
-    //         };
-    //         ufmt::uwrite!(&mut serial, "{}", c).unwrap(); 
-    //     }
-    //     ufmt::uwriteln!(&mut serial, "\r").unwrap(); 
-    // }
-    // ufmt::uwriteln!(&mut serial, "Laby, real: {}x{}, size: {}x{}\r", li.real_x, li.real_y, li.size_x, li.size_y).unwrap();
-
     ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap();
 
     loop {
