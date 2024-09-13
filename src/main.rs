@@ -34,27 +34,14 @@ use panic_halt as _;
 
 use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
-use rand::RngCore;
 
 const MAX_RX: usize = 25;
 const MAX_RY: usize = 25;
-// const MAX_RX: usize = 21;
-// const MAX_RY: usize = 21;
-// const MAX_RX: usize = 101;
-// const MAX_RY: usize = 101;
 const MAX_ARR_SIZE: usize = MAX_RX * MAX_RY;
 const MAX_POS_SIZE: usize =
       (MAX_RX - 3) / 2
     * (MAX_RY - 3) / 2;
 
-// struct Laby {
-//     size_x: i8,
-//     size_y: i8,
-//     real_x: i8,
-//     real_y: i8,
-//     arr: [u8; MAX_ARR_SIZE],
-//     dirs: [i8; 4],
-// }
 struct Laby {
     size_x: isize,
     size_y: isize,
@@ -84,7 +71,7 @@ fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
     let pins = arduino_hal::pins!(dp);
     let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
-    arduino_hal::delay_ms(1000);
+    let mut adc = arduino_hal::Adc::new(dp.ADC, Default::default());
 
     let mut led = pins.d13.into_output();
     let mut led_n = pins.d7.into_output();
@@ -95,11 +82,13 @@ fn main() -> ! {
     let btn_w = pins.d2.into_pull_up_input();
     let btn_e = pins.d4.into_pull_up_input();
     let btn_s = pins.d5.into_pull_up_input();
+    let a_pin = pins.a0.into_analog_input(&mut adc);
 
-    let mut rng = SmallRng::seed_from_u64(1234_u64);
-    let rand_num = rng.next_u64();
-    _ = ufmt::uwriteln!(&mut serial, "Random: {}\r", rand_num);
+    arduino_hal::delay_ms(1000);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap();
+    let seed = a_pin.analog_read(&mut adc);
+    ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap();
+    let mut rng = SmallRng::seed_from_u64(seed as u64);
     let mut li = Laby::new(19, 19);
     for i in 0..MAX_ARR_SIZE {
         li.arr[i] = 0;
@@ -109,6 +98,7 @@ fn main() -> ! {
             li.arr[(x + y * li.real_x) as usize] = 1; 
         }
     }
+    ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap();
     let mut jump_pos = [0_usize; MAX_POS_SIZE];
     let mut jump_num = 0_i32;
     let mut pos: isize = 2 + 2 * li.real_x;     
@@ -151,6 +141,7 @@ fn main() -> ! {
             }
         }
     }
+    li.arr[(li.size_x - 1 + li.real_x * li.size_y) as usize] = 0;
 
     for y in 1..li.size_y + 1 {
         for x in 1..li.size_x + 1 {
@@ -194,7 +185,6 @@ fn main() -> ! {
     // }
     // ufmt::uwriteln!(&mut serial, "Laby, real: {}x{}, size: {}x{}\r", li.real_x, li.real_y, li.size_x, li.size_y).unwrap();
 
-    ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap();
     ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap();
 
     loop {
