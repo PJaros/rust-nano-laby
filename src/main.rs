@@ -46,7 +46,7 @@ struct Laby {
     size_x: isize,
     size_y: isize,
     real_x: isize,
-    real_y: isize,
+    _real_y: isize,
     arr: [u8; MAX_ARR_SIZE],
     dirs: [isize; 4],
 }
@@ -59,7 +59,7 @@ impl Laby {
             size_x: size_x,
             size_y: size_y,
             real_x: real_x,
-            real_y: real_y,
+            _real_y: real_y,
             arr: [0; MAX_ARR_SIZE],
             dirs: [-real_x, -1_isize, 1_isize, real_x],
         };
@@ -133,8 +133,8 @@ fn main() -> ! {
     let mut led_w = pins.d6.into_output();
     let mut led_e = pins.d9.into_output();
     let mut led_s = pins.d8.into_output();
-    let btn_n = pins.d3.into_pull_up_input();
-    let btn_w = pins.d2.into_pull_up_input();
+    let btn_n = pins.d2.into_pull_up_input();
+    let btn_w = pins.d3.into_pull_up_input();
     let btn_e = pins.d4.into_pull_up_input();
     let btn_s = pins.d5.into_pull_up_input();
     let a_pin = pins.a0.into_analog_input(&mut adc);
