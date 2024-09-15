@@ -1,7 +1,9 @@
 #![no_std]
 #![no_main]
 
-use panic_halt as _;
+// use panic_halt as _;
+use arduino_hal::prelude::*;
+use arduino_hal::adc;
 // use arduino_hal::delay_ms;
 // use atmega_hal::port::mode::Output;
 // use atmega_hal::port::{Dynamic, Pin};
@@ -35,6 +37,38 @@ use panic_halt as _;
 use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
 
+// Panic handler per https://github.com/Rahix/avr-hal/blob/main/examples/arduino-nano/src/bin/nano-panic.rs
+#[cfg(not(doc))]
+#[panic_handler]
+fn panic(info: &core::panic::PanicInfo) -> ! {
+    avr_device::interrupt::disable();
+
+    // Get the peripherals so we can access serial and the LED.
+    // Because the interrupt is disabled and main has called and main is in panic, we know this is safe.
+    let dp = unsafe { arduino_hal::Peripherals::steal() };
+    let pins = arduino_hal::pins!(dp);
+    let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
+
+    // Print out panic location
+    ufmt::uwriteln!(&mut serial, "Firmware panic!\r").unwrap_infallible();
+    if let Some(loc) = info.location() {
+        ufmt::uwriteln!(
+            &mut serial,
+            "  At {}:{}:{}\r",
+            loc.file(),
+            loc.line(),
+            loc.column(),
+        )
+        .unwrap_infallible();
+    }
+
+    // Blink LED rapidly
+    let mut led = pins.d13.into_output();
+    loop {
+        led.toggle();
+        arduino_hal::delay_ms(100);
+    }
+}
 const MAX_RX: usize = 25;
 const MAX_RY: usize = 25;
 const MAX_ARR_SIZE: usize = MAX_RX * MAX_RY;
@@ -121,6 +155,10 @@ impl Laby {
     }
 }
 
+// fn get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
+//     core::any::type_name::<T>()
+// }
+
 #[arduino_hal::entry]
 fn main() -> ! {
     let dp = arduino_hal::Peripherals::take().unwrap();
@@ -139,15 +177,18 @@ fn main() -> ! {
     let btn_s = pins.d5.into_pull_up_input();
     let a_pin = pins.a0.into_analog_input(&mut adc);
 
-    arduino_hal::delay_ms(1000);
-    ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap();
+    // Run adc blocking read to certain that arduino is ready
+    _ = adc.read_blocking(&adc::channel::Vbg);
+    ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
+    ufmt::uwriteln!(&mut serial, "Laybrinth: {} Positions: {}\r", MAX_ARR_SIZE, MAX_POS_SIZE).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut serial)).unwrap_infallible();
     let seed = a_pin.analog_read(&mut adc);
-    ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap();
+    ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
     let mut li = Laby::new(19, 19);
-    ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap();
+    ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
     li.generate(&mut rng);
-
+    
     for y in 1..li.size_y + 1 {
         for x in 1..li.size_x + 1 {
             let num = li.arr[(x + y * li.real_x) as usize];
@@ -155,22 +196,23 @@ fn main() -> ! {
                 0 => ' ',
                 _ => '#',
             };
-            ufmt::uwrite!(&mut serial, "{}", c).unwrap(); 
+            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible(); 
         }
-        ufmt::uwriteln!(&mut serial, "\r").unwrap(); 
+        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible(); 
     }
-    ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap();
+    ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap_infallible();
 
     loop {
-        if btn_n.is_low() {ufmt::uwriteln!(&mut serial, "btn_n\r").unwrap(); }
-        if btn_w.is_low() {ufmt::uwriteln!(&mut serial, "btn_w\r").unwrap(); }
-        if btn_e.is_low() {ufmt::uwriteln!(&mut serial, "btn_e\r").unwrap(); }
-        if btn_s.is_low() {ufmt::uwriteln!(&mut serial, "btn_s\r").unwrap(); }
+        if btn_n.is_low() {ufmt::uwriteln!(&mut serial, "btn_n\r").unwrap_infallible(); }
+        if btn_w.is_low() {ufmt::uwriteln!(&mut serial, "btn_w\r").unwrap_infallible(); }
+        if btn_e.is_low() {ufmt::uwriteln!(&mut serial, "btn_e\r").unwrap_infallible(); }
+        if btn_s.is_low() {ufmt::uwriteln!(&mut serial, "btn_s\r").unwrap_infallible(); }
         if btn_n.is_low() {led_n.set_high();} else {led_n.set_low();}
         if btn_w.is_low() {led_w.set_high();} else {led_w.set_low();}
         if btn_e.is_low() {led_e.set_high();} else {led_e.set_low();}
         if btn_s.is_low() {led_s.set_high();} else {led_s.set_low();}
         led.toggle();
         arduino_hal::delay_ms(1000);
+        // panic!();<
     }
 }

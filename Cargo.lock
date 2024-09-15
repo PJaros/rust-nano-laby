@@ -324,6 +324,7 @@ name = "rust-nano-walk"
 version = "0.1.0"
 dependencies = [
  "arduino-hal",
+ "avr-device",
  "embedded-hal 0.2.7",
  "heapless",
  "nb 0.1.3",
