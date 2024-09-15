@@ -88,15 +88,15 @@ impl Laby {
     pub fn new(size_x: isize, size_y: isize) -> Self {
         let real_x: isize = size_x + 2;
         let real_y: isize = size_y + 2;
-        let li = Self {
-            size_x: size_x,
-            size_y: size_y,
-            real_x: real_x,
+
+        Self {
+            size_x,
+            size_y,
+            real_x,
             _real_y: real_y,
             arr: [0; MAX_ARR_SIZE],
             dirs: [-real_x, -1_isize, 1_isize, real_x],
-        };
-        li
+        }
     }
 
     pub fn generate(&mut self, rng: &mut impl Rng) {
@@ -113,7 +113,6 @@ impl Laby {
         let mut pos: isize = 2 + 2 * self.real_x;
         self.arr[pos as usize] = 0;
 
-        #[rustfmt::skip]
         loop {
             loop {
                 let mut avai_dir = [0_isize; 4];
@@ -127,6 +126,7 @@ impl Laby {
                     }
                 }
 
+                #[rustfmt::skip]
                 let dir = match avai_found {
                     0 => {break;},
                     1 => avai_dir[0],
@@ -143,6 +143,7 @@ impl Laby {
                     self.arr[pos as usize] = 0;
                 }
             }
+            #[rustfmt::skip]
             match jump_num {
                 0 => {break;}
                 _ => {
