@@ -1,9 +1,10 @@
 #![no_std]
 #![no_main]
+#![feature(stmt_expr_attributes)]
 
 // use panic_halt as _;
-use arduino_hal::prelude::*;
 use arduino_hal::adc;
+use arduino_hal::prelude::*;
 // use arduino_hal::delay_ms;
 // use atmega_hal::port::mode::Output;
 // use atmega_hal::port::{Dynamic, Pin};
@@ -34,8 +35,8 @@ use arduino_hal::adc;
 // use crate::laby::Laby;
 // mod laby;
 
-use rand::{Rng, SeedableRng};
 use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
 
 // Panic handler per https://github.com/Rahix/avr-hal/blob/main/examples/arduino-nano/src/bin/nano-panic.rs
 #[cfg(not(doc))]
@@ -72,9 +73,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 const MAX_RX: usize = 25;
 const MAX_RY: usize = 25;
 const MAX_ARR_SIZE: usize = MAX_RX * MAX_RY;
-const MAX_POS_SIZE: usize =
-      (MAX_RX - 3) / 2
-    * (MAX_RY - 3) / 2;
+const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
 
 struct Laby {
     size_x: isize,
@@ -106,14 +105,15 @@ impl Laby {
         }
         for y in 1..self.size_y + 1 {
             for x in 1..self.size_x + 1 {
-                self.arr[(x + y * self.real_x) as usize] = 1; 
+                self.arr[(x + y * self.real_x) as usize] = 1;
             }
         }
         let mut jump_pos = [0_usize; MAX_POS_SIZE];
         let mut jump_num = 0_i32;
-        let mut pos: isize = 2 + 2 * self.real_x;     
+        let mut pos: isize = 2 + 2 * self.real_x;
         self.arr[pos as usize] = 0;
-    
+
+        #[rustfmt::skip]
         loop {
             loop {
                 let mut avai_dir = [0_isize; 4];
@@ -126,7 +126,7 @@ impl Laby {
                         avai_found += 1;
                     }
                 }
-    
+
                 let dir = match avai_found {
                     0 => {break;},
                     1 => avai_dir[0],
@@ -137,7 +137,7 @@ impl Laby {
                 };
                 jump_pos[jump_num as usize] = pos as usize;
                 jump_num += 1;
-    
+
                 for _ in 0..2 {
                     pos += dir;
                     self.arr[pos as usize] = 0;
@@ -151,7 +151,7 @@ impl Laby {
                 }
             }
         }
-        self.arr[(self.size_x - 1 + self.real_x * self.size_y) as usize] = 0;    
+        self.arr[(self.size_x - 1 + self.real_x * self.size_y) as usize] = 0;
     }
 }
 
@@ -180,7 +180,13 @@ fn main() -> ! {
     // Run adc blocking read to certain that arduino is ready
     _ = adc.read_blocking(&adc::channel::Vbg);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
-    ufmt::uwriteln!(&mut serial, "Laybrinth: {} Positions: {}\r", MAX_ARR_SIZE, MAX_POS_SIZE).unwrap_infallible();
+    ufmt::uwriteln!(
+        &mut serial,
+        "Laybrinth: {} Positions: {}\r",
+        MAX_ARR_SIZE,
+        MAX_POS_SIZE
+    )
+    .unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut serial)).unwrap_infallible();
     let seed = a_pin.analog_read(&mut adc);
     ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
@@ -188,7 +194,7 @@ fn main() -> ! {
     let mut li = Laby::new(19, 19);
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
     li.generate(&mut rng);
-    
+
     for y in 1..li.size_y + 1 {
         for x in 1..li.size_x + 1 {
             let num = li.arr[(x + y * li.real_x) as usize];
@@ -196,12 +202,13 @@ fn main() -> ! {
                 0 => ' ',
                 _ => '#',
             };
-            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible(); 
+            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
         }
-        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible(); 
+        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
     }
     ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap_infallible();
 
+    #[rustfmt::skip]
     loop {
         if btn_n.is_low() {ufmt::uwriteln!(&mut serial, "btn_n\r").unwrap_infallible(); }
         if btn_w.is_low() {ufmt::uwriteln!(&mut serial, "btn_w\r").unwrap_infallible(); }
