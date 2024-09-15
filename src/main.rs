@@ -72,7 +72,7 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 const MAX_RX: usize = 25;
 const MAX_RY: usize = 25;
-const MAX_ARR_SIZE: usize = MAX_RX * MAX_RY;
+const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
 const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
 
 struct Laby {
@@ -99,19 +99,44 @@ impl Laby {
         }
     }
 
+    pub fn set_0(&mut self, pos: usize) {
+        let byte_pos = pos / 8;
+        let bit_pos = pos % 8;
+        let mut byte_value = self.arr[byte_pos];
+        byte_value &= !(1 << bit_pos);
+        self.arr[byte_pos] = byte_value;
+    }
+
+    pub fn set_1(&mut self, pos: usize) {
+        let byte_pos = pos / 8;
+        let bit_pos = pos % 8;
+        let mut byte_value = self.arr[byte_pos];
+        byte_value |= 1 << bit_pos;
+        self.arr[byte_pos] = byte_value;
+    }
+
+    pub fn read(&mut self, pos: usize) -> bool {
+        let byte_pos = pos / 8;
+        let bit_pos = pos % 8;
+        let mut byte_value = self.arr[byte_pos];
+        byte_value &= 1 << bit_pos;
+        byte_value > 0
+    }
+
     pub fn generate(&mut self, rng: &mut impl Rng) {
         for i in 0..MAX_ARR_SIZE {
             self.arr[i] = 0;
         }
         for y in 1..self.size_y + 1 {
             for x in 1..self.size_x + 1 {
-                self.arr[(x + y * self.real_x) as usize] = 1;
+                let pos = (x + y * self.real_x) as usize;
+                self.set_1(pos);
             }
         }
         let mut jump_pos = [0_usize; MAX_POS_SIZE];
         let mut jump_num = 0_i32;
         let mut pos: isize = 2 + 2 * self.real_x;
-        self.arr[pos as usize] = 0;
+        self.set_0(pos as usize);
 
         loop {
             loop {
@@ -120,7 +145,8 @@ impl Laby {
                 for i in 0..self.dirs.len() {
                     let dir = self.dirs[i];
                     let look_pos = (pos + 2 * dir) as usize;
-                    if self.arr[look_pos] != 0 {
+
+                    if self.read(look_pos) == true {
                         avai_dir[avai_found] = dir;
                         avai_found += 1;
                     }
@@ -131,7 +157,7 @@ impl Laby {
                     0 => {break;},
                     1 => avai_dir[0],
                     _ => {
-                        let slot = rng.gen_range(0..=avai_found);
+                        let slot = rng.gen_range(0..avai_found);
                         avai_dir[slot]
                     }
                 };
@@ -140,7 +166,7 @@ impl Laby {
 
                 for _ in 0..2 {
                     pos += dir;
-                    self.arr[pos as usize] = 0;
+                    self.set_0(pos as usize);
                 }
             }
             #[rustfmt::skip]
@@ -152,7 +178,8 @@ impl Laby {
                 }
             }
         }
-        self.arr[(self.size_x - 1 + self.real_x * self.size_y) as usize] = 0;
+        let pos = self.size_x - 1 + self.real_x * self.size_y;
+        self.set_0(pos as usize);
     }
 }
 
@@ -198,10 +225,11 @@ fn main() -> ! {
 
     for y in 1..li.size_y + 1 {
         for x in 1..li.size_x + 1 {
-            let num = li.arr[(x + y * li.real_x) as usize];
-            let c = match num {
-                0 => ' ',
-                _ => '#',
+            let pos = (x + y * li.real_x) as usize;
+            let v = li.read(pos);
+            let c = match v {
+                false => ' ',
+                true => '#',
             };
             ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
         }
