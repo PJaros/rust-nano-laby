@@ -14,6 +14,10 @@ use arduino_hal::prelude::*;
 // use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
 // use ufmt::uwriteln;
 
+// Commands:
+// Build: RAVEDUDE_PORT=/dev/ttyUSB0 cargo build --release
+// Detect USB-Port: journalctl -k -f
+
 // Links:
 // Modules: https://rust-classes.com/chapter_4_3
 // OOP: https://doc.rust-lang.org/book/ch17-01-what-is-oo.html
@@ -70,8 +74,10 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         arduino_hal::delay_ms(100);
     }
 }
-const MAX_RX: usize = 25;
-const MAX_RY: usize = 25;
+const MAX_RX: usize = 35;
+const MAX_RY: usize = 35;
+// const MAX_RX: usize = 25;
+// const MAX_RY: usize = 25;
 const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
 const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
 
@@ -82,7 +88,23 @@ struct Laby {
     _real_y: isize,
     arr: [u8; MAX_ARR_SIZE],
     dirs: [isize; 4],
+    // max_used_jump: i32,
 }
+
+// fn reset_Laby(size_x: isize, size_y: isize) -> Laby {
+//     let real_x: isize = size_x + 2;
+//     let real_y: isize = size_y + 2;
+
+//     Laby {
+//         size_x,
+//         size_y,
+//         real_x,
+//         _real_y: real_y,
+//         arr: [0; MAX_ARR_SIZE],
+//         dirs: [-real_x, -1_isize, 1_isize, real_x],
+//         max_used_jump: 0,
+//     }
+// }
 
 impl Laby {
     pub fn new(size_x: isize, size_y: isize) -> Self {
@@ -96,6 +118,7 @@ impl Laby {
             _real_y: real_y,
             arr: [0; MAX_ARR_SIZE],
             dirs: [-real_x, -1_isize, 1_isize, real_x],
+            // max_used_jump: 0,
         }
     }
 
@@ -134,7 +157,7 @@ impl Laby {
             }
         }
         let mut jump_pos = [0_usize; MAX_POS_SIZE];
-        let mut jump_num = 0_i32;
+        let mut jump_num = 0_usize;
         let mut pos: isize = 2 + 2 * self.real_x;
         self.set_0(pos as usize);
 
@@ -161,7 +184,7 @@ impl Laby {
                         avai_dir[slot]
                     }
                 };
-                jump_pos[jump_num as usize] = pos as usize;
+                jump_pos[jump_num] = pos as usize;
                 jump_num += 1;
 
                 for _ in 0..2 {
@@ -174,9 +197,10 @@ impl Laby {
                 0 => {break;}
                 _ => {
                     jump_num -= 1;
-                    pos = jump_pos[jump_num as usize] as isize;
+                    pos = jump_pos[jump_num] as isize;
                 }
             }
+            // self.max_used_jump = (jump_num as i32).max(self.max_used_jump);
         }
         let pos = self.size_x - 1 + self.real_x * self.size_y;
         self.set_0(pos as usize);
@@ -216,11 +240,39 @@ fn main() -> ! {
     )
     .unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut serial)).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "usize::MAX: {}\r", usize::MAX).unwrap_infallible();
     let seed = a_pin.analog_read(&mut adc);
     ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
-    let mut li = Laby::new(19, 19);
+    let mut li = Laby::new(33, 33);
+    // let mut li = Laby::new(49, 49);
+    // let mut li = Laby::new(19, 19);
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
+
+    // const TEST_NUM: usize = 1000;
+    // let mut max_all = 0;
+    // let mut max_sum = 0;
+    // for i in 0..TEST_NUM {
+    //     li.generate(&mut rng);
+    //     if (i % 100 == 0 && i != 0) {
+    //         ufmt::uwriteln!(&mut serial, "i: {}\r", i);
+    //     }
+    //     max_sum += li.max_used_jump;
+    //     max_all = max_all.max(li.max_used_jump);
+    //     li.max_used_jump = 0;
+    // }
+    // let max_avg = (max_sum as f32) / (TEST_NUM as f32);
+    // ufmt::uwriteln!(&mut serial, "max_all: {}, max_avg: {}\r", max_all, max_avg as u32).unwrap_infallible();
+
+    // ufmt::uwriteln!(&mut serial, "max_all: {}, 0: {}, 1: {}, 2: {}\r", max_all, stat_jump[0], stat_jump[1], stat_jump[2], ).unwrap_infallible();
+    // let mut container = [0; 3];
+    // for _ in 0..10000 {
+    //     let c = rng.gen_range(0..3);
+    //     container[c] += 1;
+    // }
+    // ufmt::uwriteln!(&mut serial, "0: {}, 1: {}, 2: {}\r", container[0], container[1], container[2], ).unwrap_infallible();
+
     li.generate(&mut rng);
 
     for y in 1..li.size_y + 1 {
