@@ -91,21 +91,6 @@ struct Laby {
     // max_used_jump: i32,
 }
 
-// fn reset_Laby(size_x: isize, size_y: isize) -> Laby {
-//     let real_x: isize = size_x + 2;
-//     let real_y: isize = size_y + 2;
-
-//     Laby {
-//         size_x,
-//         size_y,
-//         real_x,
-//         _real_y: real_y,
-//         arr: [0; MAX_ARR_SIZE],
-//         dirs: [-real_x, -1_isize, 1_isize, real_x],
-//         max_used_jump: 0,
-//     }
-// }
-
 impl Laby {
     pub fn new(size_x: isize, size_y: isize) -> Self {
         let real_x: isize = size_x + 2;
@@ -181,11 +166,11 @@ impl Laby {
                     1 => avai_dir[0],
                     _ => {
                         let slot = rng.gen_range(0..avai_found);
+                        jump_pos[jump_num] = pos as usize;
+                        jump_num += 1;
                         avai_dir[slot]
                     }
                 };
-                jump_pos[jump_num] = pos as usize;
-                jump_num += 1;
 
                 for _ in 0..2 {
                     pos += dir;
@@ -250,13 +235,13 @@ fn main() -> ! {
     // let mut li = Laby::new(19, 19);
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
 
-    // const TEST_NUM: usize = 1000;
+    // const TEST_NUM: usize = 500;
     // let mut max_all = 0;
     // let mut max_sum = 0;
-    // for i in 0..TEST_NUM {
+    // for i in 1..=TEST_NUM {
     //     li.generate(&mut rng);
-    //     if (i % 100 == 0 && i != 0) {
-    //         ufmt::uwriteln!(&mut serial, "i: {}\r", i);
+    //     if i % 100 == 0 {
+    //         ufmt::uwriteln!(&mut serial, "i: {}\r", i).unwrap_infallible();
     //     }
     //     max_sum += li.max_used_jump;
     //     max_all = max_all.max(li.max_used_jump);
