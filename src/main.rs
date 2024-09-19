@@ -383,7 +383,7 @@ fn main() -> ! {
                 size_y += 2;
                 li.change_size(size_x, size_y);
                 pos = 2 + 2 * li.real_x;
-                ufmt::uwriteln!(&mut serial, "Level {}. EGenerating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+                ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
                 li.generate(&mut rng);
             }
             set_wall(&li, &pos, &mut w);
@@ -404,7 +404,5 @@ fn main() -> ! {
             //     game = laby.create_random_game(sizeY, sizeX)
         }
         arduino_hal::delay_ms(50);
-        led.toggle();
-        // arduino_hal::delay_ms(1000);
     }
 }
