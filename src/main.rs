@@ -5,14 +5,8 @@
 // use panic_halt as _;
 use arduino_hal::adc;
 use arduino_hal::prelude::*;
-// use arduino_hal::delay_ms;
-// use atmega_hal::port::mode::Output;
-// use atmega_hal::port::{Dynamic, Pin};
-// use avr_hal_generic::avr_device;
-// use core::{fmt::Write, panic::PanicInfo};
-// use embassy_executor::Spawner;
-// use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, mutex::Mutex};
-// use ufmt::uwriteln;
+use arduino_hal::port::Pin;
+use arduino_hal::port::mode::Output;
 
 // Commands:
 // Build: RAVEDUDE_PORT=/dev/ttyUSB0 cargo build --release
@@ -76,10 +70,61 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
 }
 const MAX_RX: usize = 35;
 const MAX_RY: usize = 35;
-// const MAX_RX: usize = 25;
-// const MAX_RY: usize = 25;
 const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
 const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
+
+struct ButtonState {
+    btn_n: bool, 
+    btn_w: bool,
+    btn_e: bool,
+    btn_s: bool,
+}
+
+struct Wall {
+    wall_n: bool,
+    wall_w: bool,
+    wall_e: bool,
+    wall_s: bool,
+}
+
+fn set_wall(li: &Laby, pos: &isize, w: &mut Wall) {
+    w.wall_n = li.read((pos + li.dirs[0]) as usize);
+    w.wall_w = li.read((pos + li.dirs[1]) as usize);
+    w.wall_e = li.read((pos + li.dirs[2]) as usize);
+    w.wall_s = li.read((pos + li.dirs[3]) as usize);
+}
+
+fn led_show_wall(leds: &mut [&mut Pin<Output>; 4], w: &mut Wall) {
+    led_set_state(leds[0], w.wall_n);
+    led_set_state(leds[1], w.wall_w);
+    led_set_state(leds[2], w.wall_e);
+    led_set_state(leds[3], w.wall_s);
+}
+
+fn blink(leds: &mut [&mut Pin<Output>; 4], num: usize) {
+    for _ in 0..num {
+        for _ in 0..2 {
+            for state in [true, false] {
+                led_all(leds, state);
+                arduino_hal::delay_ms(100);
+            }
+        }
+    }
+}
+
+fn led_all(leds: &mut [&mut Pin<Output>; 4], state: bool) {
+    for l in leds {
+        led_set_state(l, state);
+    }
+}
+
+#[rustfmt::skip]
+fn led_set_state(l: &mut Pin<Output>, state: bool) {
+    match state {
+        false => {l.set_low();},
+        true => {l.set_high();}
+    }
+}
 
 struct Laby {
     size_x: isize,
@@ -107,6 +152,20 @@ impl Laby {
         }
     }
 
+    pub fn change_size(&mut self, size_x: isize, size_y: isize) {
+        let real_x: isize = size_x + 2;
+        let real_y: isize = size_y + 2;
+        
+        self.size_x = size_x;
+        self.size_y = size_y;
+        self.real_x = real_x;
+        self._real_y = real_y;
+        for i in 0..MAX_ARR_SIZE {
+            self.arr[i] = 0;
+        }
+        self.dirs  = [-real_x, -1_isize, 1_isize, real_x];
+    }
+
     pub fn set_0(&mut self, pos: usize) {
         let byte_pos = pos / 8;
         let bit_pos = pos % 8;
@@ -123,7 +182,7 @@ impl Laby {
         self.arr[byte_pos] = byte_value;
     }
 
-    pub fn read(&mut self, pos: usize) -> bool {
+    pub fn read(&self, pos: usize) -> bool {
         let byte_pos = pos / 8;
         let bit_pos = pos % 8;
         let mut byte_value = self.arr[byte_pos];
@@ -192,9 +251,9 @@ impl Laby {
     }
 }
 
-// fn get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
-//     core::any::type_name::<T>()
-// }
+fn _get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
+    core::any::type_name::<T>()
+}
 
 #[arduino_hal::entry]
 fn main() -> ! {
@@ -204,10 +263,10 @@ fn main() -> ! {
     let mut adc = arduino_hal::Adc::new(dp.ADC, Default::default());
 
     let mut led = pins.d13.into_output();
-    let mut led_n = pins.d7.into_output();
-    let mut led_w = pins.d6.into_output();
-    let mut led_e = pins.d9.into_output();
-    let mut led_s = pins.d8.into_output();
+    let mut led_n = pins.d7.into_output().downgrade();
+    let mut led_w = pins.d6.into_output().downgrade();
+    let mut led_e = pins.d9.into_output().downgrade();
+    let mut led_s = pins.d8.into_output().downgrade();
     let btn_n = pins.d2.into_pull_up_input();
     let btn_w = pins.d3.into_pull_up_input();
     let btn_e = pins.d4.into_pull_up_input();
@@ -224,15 +283,16 @@ fn main() -> ! {
         MAX_POS_SIZE
     )
     .unwrap_infallible();
-    // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut serial)).unwrap_infallible();
-    // ufmt::uwriteln!(&mut serial, "{}\r", get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut serial)).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "usize::MAX: {}\r", usize::MAX).unwrap_infallible();
     let seed = a_pin.analog_read(&mut adc);
     ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
-    let mut li = Laby::new(33, 33);
-    // let mut li = Laby::new(49, 49);
-    // let mut li = Laby::new(19, 19);
+    let mut level = 1;
+    let mut size_x = 7;
+    let mut size_y = 7;
+    let mut li = Laby::new(size_x, size_y);
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
 
     // const TEST_NUM: usize = 500;
@@ -274,18 +334,77 @@ fn main() -> ! {
     }
     ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap_infallible();
 
+    let mut pos: isize = 2 + 2 * li.real_x;
+    let mut w = Wall{
+        wall_n: false, 
+        wall_w: false, 
+        wall_e: false, 
+        wall_s: false, 
+    };
+    // ufmt::uwriteln!(&mut serial, "wall, n: {}, w: {}, e: {}, s: {}\r", w.wall_n, w.wall_w, w.wall_e, w.wall_s).unwrap_infallible();
+    let mut led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
+    set_wall(&li, &pos, &mut w);
+    led_show_wall(&mut led_arr, &mut w);
+    let mut last_pressed_buttons = ButtonState{btn_n: false, btn_w: false, btn_e: false, btn_s: false};
+    let mut buttons_were_pressed = false;
+    
     #[rustfmt::skip]
     loop {
-        if btn_n.is_low() {ufmt::uwriteln!(&mut serial, "btn_n\r").unwrap_infallible(); }
-        if btn_w.is_low() {ufmt::uwriteln!(&mut serial, "btn_w\r").unwrap_infallible(); }
-        if btn_e.is_low() {ufmt::uwriteln!(&mut serial, "btn_e\r").unwrap_infallible(); }
-        if btn_s.is_low() {ufmt::uwriteln!(&mut serial, "btn_s\r").unwrap_infallible(); }
-        if btn_n.is_low() {led_n.set_high();} else {led_n.set_low();}
-        if btn_w.is_low() {led_w.set_high();} else {led_w.set_low();}
-        if btn_e.is_low() {led_e.set_high();} else {led_e.set_low();}
-        if btn_s.is_low() {led_s.set_high();} else {led_s.set_low();}
+        let buttons = ButtonState {
+            btn_n: btn_n.is_low(),
+            btn_w: btn_w.is_low(),
+            btn_e: btn_e.is_low(),
+            btn_s: btn_s.is_low(),
+        };
+        if  buttons.btn_n == true ||
+            buttons.btn_w == true ||
+            buttons.btn_e == true ||
+            buttons.btn_s == true {
+              last_pressed_buttons = buttons;
+              buttons_were_pressed = true;
+        } else if buttons_were_pressed == true {
+            // led_all(&mut led_arr, false);
+
+            if      last_pressed_buttons.btn_n == true && w.wall_n == false {pos += 2 * li.dirs[0];}
+            else if last_pressed_buttons.btn_w == true && w.wall_w == false {pos += 2 * li.dirs[1];}
+            else if last_pressed_buttons.btn_e == true && w.wall_e == false {pos += 2 * li.dirs[2];}
+            else if last_pressed_buttons.btn_s == true && w.wall_s == false {pos += 2 * li.dirs[3];}
+            else if last_pressed_buttons.btn_n == true && w.wall_n == true  {blink(led_arr, 1);}
+            else if last_pressed_buttons.btn_w == true && w.wall_w == true  {blink(led_arr, 1);}
+            else if last_pressed_buttons.btn_e == true && w.wall_e == true  {blink(led_arr, 1);}
+            else if last_pressed_buttons.btn_s == true && w.wall_s == true  {blink(led_arr, 1);}
+            buttons_were_pressed = false;
+
+            if pos == li.size_x - 1 + li.real_x * (li.size_y + 1) {
+                ufmt::uwriteln!(&mut serial, "Exit found!\r").unwrap_infallible();
+                blink(led_arr, 2);
+                level += 1;
+                size_x += 2;
+                size_y += 2;
+                li.change_size(size_x, size_y);
+                pos = 2 + 2 * li.real_x;
+                ufmt::uwriteln!(&mut serial, "Level {}. EGenerating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+                li.generate(&mut rng);
+            }
+            set_wall(&li, &pos, &mut w);
+            led_show_wall(&mut led_arr, &mut w);
+
+            // if (   game.posX == 0              or game.posY == 0
+            //     or game.posX == game.sizeX + 1 or game.posY == game.sizeY + 1):
+            //     laby.blink(hw)
+            //     laby.blink(hw)
+            //     if (level == 1):
+            //         print("Exit found!")
+            //     else:
+            //         print("Exit found! This was the labyrinth: ")
+            //         laby.line_print(game)
+            //     level += 1    
+            //     sizeY, sizeX = sizeY + 2, sizeX + 2
+            //     print("Level %d. Generating a labyrinth: %d x %d" %(level, game.sizeX, game.sizeY))
+            //     game = laby.create_random_game(sizeY, sizeX)
+        }
+        arduino_hal::delay_ms(50);
         led.toggle();
-        arduino_hal::delay_ms(1000);
-        // panic!();<
+        // arduino_hal::delay_ms(1000);
     }
 }
