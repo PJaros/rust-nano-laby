@@ -4,9 +4,9 @@
 
 // use panic_halt as _;
 use arduino_hal::adc;
-use arduino_hal::prelude::*;
-use arduino_hal::port::Pin;
 use arduino_hal::port::mode::Output;
+use arduino_hal::port::Pin;
+use arduino_hal::prelude::*;
 
 // Commands:
 // Build: RAVEDUDE_PORT=/dev/ttyUSB0 cargo build --release
@@ -74,7 +74,7 @@ const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
 const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
 
 struct ButtonState {
-    btn_n: bool, 
+    btn_n: bool,
     btn_w: bool,
     btn_e: bool,
     btn_s: bool,
@@ -155,7 +155,7 @@ impl Laby {
     pub fn change_size(&mut self, size_x: isize, size_y: isize) {
         let real_x: isize = size_x + 2;
         let real_y: isize = size_y + 2;
-        
+
         self.size_x = size_x;
         self.size_y = size_y;
         self.real_x = real_x;
@@ -163,7 +163,7 @@ impl Laby {
         for i in 0..MAX_ARR_SIZE {
             self.arr[i] = 0;
         }
-        self.dirs  = [-real_x, -1_isize, 1_isize, real_x];
+        self.dirs = [-real_x, -1_isize, 1_isize, real_x];
     }
 
     pub fn set_0(&mut self, pos: usize) {
@@ -251,6 +251,7 @@ impl Laby {
     }
 }
 
+#[rustfmt::skip]
 fn _get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
     core::any::type_name::<T>()
 }
@@ -335,19 +336,24 @@ fn main() -> ! {
     ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap_infallible();
 
     let mut pos: isize = 2 + 2 * li.real_x;
-    let mut w = Wall{
-        wall_n: false, 
-        wall_w: false, 
-        wall_e: false, 
-        wall_s: false, 
+    let mut w = Wall {
+        wall_n: false,
+        wall_w: false,
+        wall_e: false,
+        wall_s: false,
     };
     // ufmt::uwriteln!(&mut serial, "wall, n: {}, w: {}, e: {}, s: {}\r", w.wall_n, w.wall_w, w.wall_e, w.wall_s).unwrap_infallible();
     let mut led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
     set_wall(&li, &pos, &mut w);
     led_show_wall(&mut led_arr, &mut w);
-    let mut last_pressed_buttons = ButtonState{btn_n: false, btn_w: false, btn_e: false, btn_s: false};
+    let mut last_pressed_buttons = ButtonState {
+        btn_n: false,
+        btn_w: false,
+        btn_e: false,
+        btn_s: false,
+    };
     let mut buttons_were_pressed = false;
-    
+
     #[rustfmt::skip]
     loop {
         let buttons = ButtonState {
