@@ -68,6 +68,8 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         arduino_hal::delay_ms(100);
     }
 }
+const START_SIZE_X: isize = 7;
+const START_SIZE_Y: isize = 7;
 const MAX_RX: usize = 35;
 const MAX_RY: usize = 35;
 const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
@@ -78,6 +80,7 @@ struct ButtonState {
     btn_w: bool,
     btn_e: bool,
     btn_s: bool,
+    // btn_reset: bool,
 }
 
 struct Wall {
@@ -164,28 +167,30 @@ impl Laby {
         self.dirs = [-real_x, -1_isize, 1_isize, real_x];
     }
 
+    #[inline]
+    pub fn get_byte_bit_pos(&self, pos: usize) -> (usize, usize) {
+        (pos / 8, pos % 8)
+    }
+
     pub fn set_0(&mut self, pos: usize) {
-        let byte_pos = pos / 8;
-        let bit_pos = pos % 8;
+        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
         let mut byte_value = self.arr[byte_pos];
         byte_value &= !(1 << bit_pos);
         self.arr[byte_pos] = byte_value;
     }
 
     pub fn set_1(&mut self, pos: usize) {
-        let byte_pos = pos / 8;
-        let bit_pos = pos % 8;
+        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
         let mut byte_value = self.arr[byte_pos];
         byte_value |= 1 << bit_pos;
         self.arr[byte_pos] = byte_value;
     }
 
     pub fn read(&self, pos: usize) -> bool {
-        let byte_pos = pos / 8;
-        let bit_pos = pos % 8;
+        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
         let mut byte_value = self.arr[byte_pos];
         byte_value &= 1 << bit_pos;
-        byte_value > 0
+        byte_value != 0
     }
 
     pub fn generate(&mut self, rng: &mut impl Rng) {
@@ -261,7 +266,6 @@ fn main() -> ! {
     let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
     let mut adc = arduino_hal::Adc::new(dp.ADC, Default::default());
 
-    let mut led = pins.d13.into_output();
     let mut led_n = pins.d7.into_output().downgrade();
     let mut led_w = pins.d6.into_output().downgrade();
     let mut led_e = pins.d9.into_output().downgrade();
@@ -270,9 +274,10 @@ fn main() -> ! {
     let btn_w = pins.d3.into_pull_up_input();
     let btn_e = pins.d4.into_pull_up_input();
     let btn_s = pins.d5.into_pull_up_input();
+    // let btn_reset = pins.a2.into_pull_up_input().downgrade();
     let a_pin = pins.a0.into_analog_input(&mut adc);
 
-    // Run adc blocking read to certain that arduino is ready
+    // Run adc blocking read to ensure that arduino is ready
     _ = adc.read_blocking(&adc::channel::Vbg);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
     ufmt::uwriteln!(
@@ -289,8 +294,8 @@ fn main() -> ! {
     ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
     let mut level = 1;
-    let mut size_x = 7;
-    let mut size_y = 7;
+    let mut size_x = START_SIZE_X;
+    let mut size_y = START_SIZE_Y;
     let mut li = Laby::new(size_x, size_y);
     ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
 
@@ -331,7 +336,6 @@ fn main() -> ! {
         }
         ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
     }
-    ufmt::uwriteln!(&mut serial, "Laby generated!\r").unwrap_infallible();
 
     let mut pos: isize = 2 + 2 * li.real_x;
     let mut w = Wall {
@@ -349,16 +353,20 @@ fn main() -> ! {
         btn_w: false,
         btn_e: false,
         btn_s: false,
+        // btn_reset: false,
     };
     let mut buttons_were_pressed = false;
+    let mut regenerate_laby_next_lvl = false;
+    // let mut regenerate_laby_reset = false;
 
     #[rustfmt::skip]
-    loop {
+    loop {    
         let buttons = ButtonState {
             btn_n: btn_n.is_low(),
             btn_w: btn_w.is_low(),
             btn_e: btn_e.is_low(),
             btn_s: btn_s.is_low(),
+            // btn_reset: btn_reset.is_low(),
         };
         if  buttons.btn_n == true ||
             buttons.btn_w == true ||
@@ -377,37 +385,53 @@ fn main() -> ! {
             else if last_pressed_buttons.btn_w == true && w.wall_w == true  {blink(led_arr, 2);}
             else if last_pressed_buttons.btn_e == true && w.wall_e == true  {blink(led_arr, 2);}
             else if last_pressed_buttons.btn_s == true && w.wall_s == true  {blink(led_arr, 2);}
+            // else if last_pressed_buttons.btn_reset == true                  {regenerate_laby_reset = true;}        
             buttons_were_pressed = false;
 
             if pos == li.size_x - 1 + li.real_x * (li.size_y + 1) {
-                ufmt::uwriteln!(&mut serial, "Exit found!\r").unwrap_infallible();
-                blink(led_arr, 4);
-                if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
-                    level += 1;
-                    size_x += 2;
-                    size_y += 2;
-                    li.change_size(size_x, size_y);    
-                }
+                regenerate_laby_next_lvl = true;
+            }
+
+            // if regenerate_laby_next_lvl || regenerate_laby_reset {
+            // if regenerate_laby_next_lvl {
+                if regenerate_laby_next_lvl {
+                    if level > 1 {
+                        ufmt::uwriteln!(&mut serial, "Exit found! Labyrinth was:\r").unwrap_infallible();
+                        for y in 1..li.size_y + 1 {
+                            for x in 1..li.size_x + 1 {
+                                let pos = (x + y * li.real_x) as usize;
+                                let v = li.read(pos);
+                                let c = match v {
+                                    false => ' ',
+                                    true => '#',
+                                };
+                                ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
+                            }
+                            ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
+                        }        
+                    }
+                    if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
+                        level += 1;
+                        size_x += 2;
+                        size_y += 2;
+                        li.change_size(size_x, size_y);    
+                    }
+                    ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+                // } else { // regenerate_laby_reset
+                //     level = 1;
+                //     size_x = START_SIZE_X;
+                //     size_y = START_SIZE_Y;
+                //     li.change_size(size_x, size_y);    
+                //     ufmt::uwriteln!(&mut serial, "Reset to Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+                // }
                 pos = 2 + 2 * li.real_x;
-                ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+                blink(led_arr, 4);
                 li.generate(&mut rng);
+                regenerate_laby_next_lvl = false;
+                // regenerate_laby_reset = false;
             }
             set_wall(&li, &pos, &mut w);
             led_show_wall(&mut led_arr, &mut w);
-
-            // if (   game.posX == 0              or game.posY == 0
-            //     or game.posX == game.sizeX + 1 or game.posY == game.sizeY + 1):
-            //     laby.blink(hw)
-            //     laby.blink(hw)
-            //     if (level == 1):
-            //         print("Exit found!")
-            //     else:
-            //         print("Exit found! This was the labyrinth: ")
-            //         laby.line_print(game)
-            //     level += 1    
-            //     sizeY, sizeX = sizeY + 2, sizeX + 2
-            //     print("Level %d. Generating a labyrinth: %d x %d" %(level, game.sizeX, game.sizeY))
-            //     game = laby.create_random_game(sizeY, sizeX)
         }
         arduino_hal::delay_ms(50);
     }
