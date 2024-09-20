@@ -103,11 +103,9 @@ fn led_show_wall(leds: &mut [&mut Pin<Output>; 4], w: &mut Wall) {
 
 fn blink(leds: &mut [&mut Pin<Output>; 4], num: usize) {
     for _ in 0..num {
-        for _ in 0..2 {
-            for state in [true, false] {
-                led_all(leds, state);
-                arduino_hal::delay_ms(100);
-            }
+        for state in [true, false] {
+            led_all(leds, state);
+            arduino_hal::delay_ms(100);
         }
     }
 }
@@ -375,15 +373,15 @@ fn main() -> ! {
             else if last_pressed_buttons.btn_w == true && w.wall_w == false {pos += 2 * li.dirs[1];}
             else if last_pressed_buttons.btn_e == true && w.wall_e == false {pos += 2 * li.dirs[2];}
             else if last_pressed_buttons.btn_s == true && w.wall_s == false {pos += 2 * li.dirs[3];}
-            else if last_pressed_buttons.btn_n == true && w.wall_n == true  {blink(led_arr, 1);}
-            else if last_pressed_buttons.btn_w == true && w.wall_w == true  {blink(led_arr, 1);}
-            else if last_pressed_buttons.btn_e == true && w.wall_e == true  {blink(led_arr, 1);}
-            else if last_pressed_buttons.btn_s == true && w.wall_s == true  {blink(led_arr, 1);}
+            else if last_pressed_buttons.btn_n == true && w.wall_n == true  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_w == true && w.wall_w == true  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_e == true && w.wall_e == true  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_s == true && w.wall_s == true  {blink(led_arr, 2);}
             buttons_were_pressed = false;
 
             if pos == li.size_x - 1 + li.real_x * (li.size_y + 1) {
                 ufmt::uwriteln!(&mut serial, "Exit found!\r").unwrap_infallible();
-                blink(led_arr, 2);
+                blink(led_arr, 4);
                 if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
                     level += 1;
                     size_x += 2;
