@@ -384,10 +384,12 @@ fn main() -> ! {
             if pos == li.size_x - 1 + li.real_x * (li.size_y + 1) {
                 ufmt::uwriteln!(&mut serial, "Exit found!\r").unwrap_infallible();
                 blink(led_arr, 2);
-                level += 1;
-                size_x += 2;
-                size_y += 2;
-                li.change_size(size_x, size_y);
+                if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
+                    level += 1;
+                    size_x += 2;
+                    size_y += 2;
+                    li.change_size(size_x, size_y);    
+                }
                 pos = 2 + 2 * li.real_x;
                 ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
                 li.generate(&mut rng);
