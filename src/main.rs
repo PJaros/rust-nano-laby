@@ -394,29 +394,29 @@ fn main() -> ! {
 
             // if regenerate_laby_next_lvl || regenerate_laby_reset {
             // if regenerate_laby_next_lvl {
-                if regenerate_laby_next_lvl {
-                    if level > 1 {
-                        ufmt::uwriteln!(&mut serial, "Exit found! Labyrinth was:\r").unwrap_infallible();
-                        for y in 1..li.size_y + 1 {
-                            for x in 1..li.size_x + 1 {
-                                let pos = (x + y * li.real_x) as usize;
-                                let v = li.read(pos);
-                                let c = match v {
-                                    false => ' ',
-                                    true => '#',
-                                };
-                                ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
-                            }
-                            ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
-                        }        
-                    }
-                    if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
-                        level += 1;
-                        size_x += 2;
-                        size_y += 2;
-                        li.change_size(size_x, size_y);    
-                    }
-                    ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
+            if regenerate_laby_next_lvl {
+                if level > 1 {
+                    ufmt::uwriteln!(&mut serial, "Exit found! Labyrinth was:\r").unwrap_infallible();
+                    for y in 1..li.size_y + 1 {
+                        for x in 1..li.size_x + 1 {
+                            let pos = (x + y * li.real_x) as usize;
+                            let v = li.read(pos);
+                            let c = match v {
+                                false => ' ',
+                                true => '#',
+                            };
+                            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
+                        }
+                        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
+                    }        
+                }
+                if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
+                    level += 1;
+                    size_x += 2;
+                    size_y += 2;
+                    li.change_size(size_x, size_y);    
+                }
+                ufmt::uwriteln!(&mut serial, "Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
                 // } else { // regenerate_laby_reset
                 //     level = 1;
                 //     size_x = START_SIZE_X;
