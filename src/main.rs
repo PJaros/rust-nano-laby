@@ -2,7 +2,6 @@
 #![no_main]
 #![feature(stmt_expr_attributes)]
 
-// use panic_halt as _;
 use arduino_hal::adc;
 use arduino_hal::port::mode::Output;
 use arduino_hal::port::Pin;
@@ -30,13 +29,13 @@ use arduino_hal::prelude::*;
 // LCG: https://en.wikipedia.org/wiki/Linear_congruential_generator
 // CLCG: https://en.wikipedia.org/wiki/Combined_linear_congruential_generator
 
-// use crate::laby::Laby;
-// mod laby;
+use crate::laby::{Laby, MAX_RX, MAX_RY};
+mod laby;
 
 use rand::rngs::SmallRng;
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 
-// Panic handler per https://github.com/Rahix/avr-hal/blob/main/examples/arduino-nano/src/bin/nano-panic.rs
+// Panic handler from https://github.com/Rahix/avr-hal/blob/main/examples/arduino-nano/src/bin/nano-panic.rs
 #[cfg(not(doc))]
 #[panic_handler]
 fn panic(info: &core::panic::PanicInfo) -> ! {
@@ -68,12 +67,9 @@ fn panic(info: &core::panic::PanicInfo) -> ! {
         arduino_hal::delay_ms(100);
     }
 }
+
 const START_SIZE_X: isize = 7;
 const START_SIZE_Y: isize = 7;
-const MAX_RX: usize = 35;
-const MAX_RY: usize = 35;
-const MAX_ARR_SIZE: usize = (MAX_RX * MAX_RY).div_ceil(8);
-const MAX_POS_SIZE: usize = (MAX_RX - 3) / 2 * (MAX_RY - 3) / 2;
 
 struct ButtonState {
     btn_n: bool,
@@ -127,133 +123,6 @@ fn led_set_state(l: &mut Pin<Output>, state: bool) {
     }
 }
 
-struct Laby {
-    size_x: isize,
-    size_y: isize,
-    real_x: isize,
-    _real_y: isize,
-    arr: [u8; MAX_ARR_SIZE],
-    dirs: [isize; 4],
-    // max_used_jump: i32,
-}
-
-impl Laby {
-    pub fn new(size_x: isize, size_y: isize) -> Self {
-        let real_x: isize = size_x + 2;
-        let real_y: isize = size_y + 2;
-
-        Self {
-            size_x,
-            size_y,
-            real_x,
-            _real_y: real_y,
-            arr: [0; MAX_ARR_SIZE],
-            dirs: [-real_x, -1_isize, 1_isize, real_x],
-            // max_used_jump: 0,
-        }
-    }
-
-    pub fn change_size(&mut self, size_x: isize, size_y: isize) {
-        let real_x: isize = size_x + 2;
-        let real_y: isize = size_y + 2;
-
-        self.size_x = size_x;
-        self.size_y = size_y;
-        self.real_x = real_x;
-        self._real_y = real_y;
-        for i in 0..MAX_ARR_SIZE {
-            self.arr[i] = 0;
-        }
-        self.dirs = [-real_x, -1_isize, 1_isize, real_x];
-    }
-
-    #[inline]
-    pub fn get_byte_bit_pos(&self, pos: usize) -> (usize, usize) {
-        (pos / 8, pos % 8)
-    }
-
-    pub fn set_0(&mut self, pos: usize) {
-        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
-        let mut byte_value = self.arr[byte_pos];
-        byte_value &= !(1 << bit_pos);
-        self.arr[byte_pos] = byte_value;
-    }
-
-    pub fn set_1(&mut self, pos: usize) {
-        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
-        let mut byte_value = self.arr[byte_pos];
-        byte_value |= 1 << bit_pos;
-        self.arr[byte_pos] = byte_value;
-    }
-
-    pub fn read(&self, pos: usize) -> bool {
-        let (byte_pos, bit_pos) = self.get_byte_bit_pos(pos);
-        let mut byte_value = self.arr[byte_pos];
-        byte_value &= 1 << bit_pos;
-        byte_value != 0
-    }
-
-    pub fn generate(&mut self, rng: &mut impl Rng) {
-        for i in 0..MAX_ARR_SIZE {
-            self.arr[i] = 0;
-        }
-        for y in 1..self.size_y + 1 {
-            for x in 1..self.size_x + 1 {
-                let pos = (x + y * self.real_x) as usize;
-                self.set_1(pos);
-            }
-        }
-        let mut jump_pos = [0_usize; MAX_POS_SIZE];
-        let mut jump_num = 0_usize;
-        let mut pos: isize = 2 + 2 * self.real_x;
-        self.set_0(pos as usize);
-
-        loop {
-            loop {
-                let mut avai_dir = [0_isize; 4];
-                let mut avai_found = 0_usize;
-                for i in 0..self.dirs.len() {
-                    let dir = self.dirs[i];
-                    let look_pos = (pos + 2 * dir) as usize;
-
-                    if self.read(look_pos) == true {
-                        avai_dir[avai_found] = dir;
-                        avai_found += 1;
-                    }
-                }
-
-                #[rustfmt::skip]
-                let dir = match avai_found {
-                    0 => {break;},
-                    1 => avai_dir[0],
-                    _ => {
-                        let slot = rng.gen_range(0..avai_found);
-                        jump_pos[jump_num] = pos as usize;
-                        jump_num += 1;
-                        avai_dir[slot]
-                    }
-                };
-
-                for _ in 0..2 {
-                    pos += dir;
-                    self.set_0(pos as usize);
-                }
-            }
-            #[rustfmt::skip]
-            match jump_num {
-                0 => {break;}
-                _ => {
-                    jump_num -= 1;
-                    pos = jump_pos[jump_num] as isize;
-                }
-            }
-            // self.max_used_jump = (jump_num as i32).max(self.max_used_jump);
-        }
-        let pos = self.size_x - 1 + self.real_x * self.size_y;
-        self.set_0(pos as usize);
-    }
-}
-
 #[rustfmt::skip]
 fn _get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
     core::any::type_name::<T>()
@@ -280,25 +149,24 @@ fn main() -> ! {
     // Run adc blocking read to ensure that arduino is ready
     _ = adc.read_blocking(&adc::channel::Vbg);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
-    ufmt::uwriteln!(
-        &mut serial,
-        "Laybrinth: {} Positions: {}\r",
-        MAX_ARR_SIZE,
-        MAX_POS_SIZE
-    )
-    .unwrap_infallible();
+
+    // Testing some variable types 
+    //
     // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut serial)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "usize::MAX: {}\r", usize::MAX).unwrap_infallible();
+
     let seed = a_pin.analog_read(&mut adc);
-    ufmt::uwriteln!(&mut serial, "Seed: {}\r", seed).unwrap_infallible();
+    ufmt::uwriteln!(&mut serial, "Current seed: {}\r", seed).unwrap_infallible();
     let mut rng = SmallRng::seed_from_u64(seed as u64);
     let mut level = 1;
     let mut size_x = START_SIZE_X;
     let mut size_y = START_SIZE_Y;
     let mut li = Laby::new(size_x, size_y);
-    ufmt::uwriteln!(&mut serial, "Generating...\r").unwrap_infallible();
 
+    // Statistics: Running a few hundred labys and calculate the max and avg jump_pos. 
+    // Also some code to test the rng
+    //
     // const TEST_NUM: usize = 500;
     // let mut max_all = 0;
     // let mut max_sum = 0;
@@ -344,7 +212,6 @@ fn main() -> ! {
         wall_e: false,
         wall_s: false,
     };
-    // ufmt::uwriteln!(&mut serial, "wall, n: {}, w: {}, e: {}, s: {}\r", w.wall_n, w.wall_w, w.wall_e, w.wall_s).unwrap_infallible();
     let mut led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
     set_wall(&li, &pos, &mut w);
     led_show_wall(&mut led_arr, &mut w);
