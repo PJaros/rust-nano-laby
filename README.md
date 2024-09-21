@@ -1,4 +1,4 @@
-rust-nano-walk
+rust-nano-laby
 ==============
 
 Rust project for the _Arduino Nano_.
