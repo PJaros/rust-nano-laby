@@ -17,7 +17,7 @@
       "top": -8.6,
       "left": 71.2,
       "rotate": 90,
-      "attrs": { "color": "green", "key": "w" }
+      "attrs": { "color": "green", "key": "a" }
     },
     {
       "type": "wokwi-pushbutton-6mm",
@@ -25,7 +25,7 @@
       "top": -27.8,
       "left": 100,
       "rotate": 90,
-      "attrs": { "color": "red", "key": "n" }
+      "attrs": { "color": "red", "key": "w" }
     },
     {
       "type": "wokwi-pushbutton-6mm",
@@ -33,7 +33,7 @@
       "top": -8.6,
       "left": 128.8,
       "rotate": 90,
-      "attrs": { "color": "blue", "key": "e" }
+      "attrs": { "color": "blue", "key": "d" }
     },
     {
       "type": "wokwi-pushbutton-6mm",
@@ -87,7 +87,7 @@
     [ "bb1:13t.c", "bb1:tn.10", "black", [ "v0" ] ],
     [ "bb1:24b.i", "bb1:tn.23", "black", [ "h48", "v-124.8", "h0.8" ] ],
     [ "bb1:36b.j", "bb1:bp.29", "black", [ "v0" ] ],
-    [ "bb1:37b.j", "bb1:6t.d", "yellow", [ "h9.6", "v-192", "h-307.2" ] ],
+    [ "bb1:37b.j", "bb1:6t.d", "purple", [ "h9.6", "v-192", "h-307.2" ] ],
     [ "bb1:40b.g", "bb1:5t.d", "blue", [ "h9.6", "v-172.8", "h-345.6" ] ],
     [ "bb1:36t.e", "bb1:bp.28", "black", [ "h-9.6", "v96", "h0.8" ] ],
     [ "bb1:39b.h", "bb1:bp.31", "black", [ "v0" ] ],
@@ -95,31 +95,10 @@
     [ "bb1:37t.a", "bb1:7t.d", "red", [ "v-76.8", "h-288" ] ],
     [ "bb1:33b.h", "bb1:bp.26", "black", [ "v0" ] ],
     [ "bb1:34b.h", "bb1:8t.d", "green", [ "v-153.6", "h-249.6" ] ],
-    [ "bb1:9t.d", "bb1:22b.i", "yellow", [ "h86.4", "v67.2" ] ],
+    [ "bb1:9t.d", "bb1:22b.i", "gray", [ "h86.4", "v67.2" ] ],
     [ "bb1:11t.c", "bb1:19t.c", "green", [ "v0" ] ],
     [ "bb1:25t.a", "bb1:10t.b", "blue", [ "v0" ] ],
     [ "bb1:22t.a", "bb1:12t.a", "red", [ "v0" ] ],
-    [ "btn1:1.l", "bb1:21t.e", "", [ "$bb" ] ],
-    [ "btn1:2.l", "bb1:19t.e", "", [ "$bb" ] ],
-    [ "btn1:1.r", "bb1:21b.f", "", [ "$bb" ] ],
-    [ "btn1:2.r", "bb1:19b.f", "", [ "$bb" ] ],
-    [ "btn2:1.l", "bb1:24t.c", "", [ "$bb" ] ],
-    [ "btn2:2.l", "bb1:22t.c", "", [ "$bb" ] ],
-    [ "btn3:1.l", "bb1:27t.e", "", [ "$bb" ] ],
-    [ "btn3:2.l", "bb1:25t.e", "", [ "$bb" ] ],
-    [ "btn3:1.r", "bb1:27b.f", "", [ "$bb" ] ],
-    [ "btn3:2.r", "bb1:25b.f", "", [ "$bb" ] ],
-    [ "r1:1", "bb1:15b.j", "", [ "$bb" ] ],
-    [ "led1:A", "bb1:37t.d", "", [ "$bb" ] ],
-    [ "led1:C", "bb1:36t.d", "", [ "$bb" ] ],
-    [ "led2:A", "bb1:34b.f", "", [ "$bb" ] ],
-    [ "led2:C", "bb1:33b.f", "", [ "$bb" ] ],
-    [ "led4:A", "bb1:40b.f", "", [ "$bb" ] ],
-    [ "led4:C", "bb1:39b.f", "", [ "$bb" ] ],
-    [ "btn4:1.r", "bb1:24b.h", "", [ "$bb" ] ],
-    [ "btn4:2.r", "bb1:22b.h", "", [ "$bb" ] ],
-    [ "led3:A", "bb1:37b.h", "", [ "$bb" ] ],
-    [ "led3:C", "bb1:36b.h", "", [ "$bb" ] ],
     [ "nano:12", "bb1:2t.e", "", [ "$bb" ] ],
     [ "nano:11", "bb1:3t.e", "", [ "$bb" ] ],
     [ "nano:10", "bb1:4t.e", "", [ "$bb" ] ],
@@ -149,7 +128,28 @@
     [ "nano:5V", "bb1:13b.i", "", [ "$bb" ] ],
     [ "nano:RESET", "bb1:14b.i", "", [ "$bb" ] ],
     [ "nano:GND.1", "bb1:15b.i", "", [ "$bb" ] ],
-    [ "nano:VIN", "bb1:16b.i", "", [ "$bb" ] ]
+    [ "nano:VIN", "bb1:16b.i", "", [ "$bb" ] ],
+    [ "btn1:1.l", "bb1:21t.e", "", [ "$bb" ] ],
+    [ "btn1:2.l", "bb1:19t.e", "", [ "$bb" ] ],
+    [ "btn1:1.r", "bb1:21b.f", "", [ "$bb" ] ],
+    [ "btn1:2.r", "bb1:19b.f", "", [ "$bb" ] ],
+    [ "btn2:1.l", "bb1:24t.c", "", [ "$bb" ] ],
+    [ "btn2:2.l", "bb1:22t.c", "", [ "$bb" ] ],
+    [ "btn3:1.l", "bb1:27t.e", "", [ "$bb" ] ],
+    [ "btn3:2.l", "bb1:25t.e", "", [ "$bb" ] ],
+    [ "btn3:1.r", "bb1:27b.f", "", [ "$bb" ] ],
+    [ "btn3:2.r", "bb1:25b.f", "", [ "$bb" ] ],
+    [ "btn4:1.r", "bb1:24b.h", "", [ "$bb" ] ],
+    [ "btn4:2.r", "bb1:22b.h", "", [ "$bb" ] ],
+    [ "r1:1", "bb1:15b.j", "", [ "$bb" ] ],
+    [ "led1:A", "bb1:37t.d", "", [ "$bb" ] ],
+    [ "led1:C", "bb1:36t.d", "", [ "$bb" ] ],
+    [ "led2:A", "bb1:34b.f", "", [ "$bb" ] ],
+    [ "led2:C", "bb1:33b.f", "", [ "$bb" ] ],
+    [ "led3:A", "bb1:37b.h", "", [ "$bb" ] ],
+    [ "led3:C", "bb1:36b.h", "", [ "$bb" ] ],
+    [ "led4:A", "bb1:40b.f", "", [ "$bb" ] ],
+    [ "led4:C", "bb1:39b.f", "", [ "$bb" ] ]
   ],
   "dependencies": {}
 }
