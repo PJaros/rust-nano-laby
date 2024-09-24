@@ -152,7 +152,7 @@ fn main() -> ! {
 
     // Testing some variable types 
     //
-    // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut serial)).unwrap_infallible();
+    // ufmt::uwriteln!(&mut serial, "Type: {}\r", _get_type_of(&mut serial)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "usize::MAX: {}\r", usize::MAX).unwrap_infallible();
 
@@ -189,21 +189,9 @@ fn main() -> ! {
     //     container[c] += 1;
     // }
     // ufmt::uwriteln!(&mut serial, "0: {}, 1: {}, 2: {}\r", container[0], container[1], container[2], ).unwrap_infallible();
-
+    
     li.generate(&mut rng);
-
-    for y in 1..li.size_y + 1 {
-        for x in 1..li.size_x + 1 {
-            let pos = (x + y * li.real_x) as usize;
-            let v = li.read(pos);
-            let c = match v {
-                false => ' ',
-                true => '#',
-            };
-            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
-        }
-        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
-    }
+    li.print(&mut serial);
 
     let mut pos: isize = 2 + 2 * li.real_x;
     let mut w = Wall {
@@ -264,18 +252,7 @@ fn main() -> ! {
             if regenerate_laby_next_lvl {
                 if level > 1 {
                     ufmt::uwriteln!(&mut serial, "Exit found! Labyrinth was:\r").unwrap_infallible();
-                    for y in 1..li.size_y + 1 {
-                        for x in 1..li.size_x + 1 {
-                            let pos = (x + y * li.real_x) as usize;
-                            let v = li.read(pos);
-                            let c = match v {
-                                false => ' ',
-                                true => '#',
-                            };
-                            ufmt::uwrite!(&mut serial, "{}", c).unwrap_infallible();
-                        }
-                        ufmt::uwriteln!(&mut serial, "\r").unwrap_infallible();
-                    }        
+                    li.print(&mut serial);
                 }
                 if (size_x + 2 + 2) as usize <= MAX_RX || (size_y + 2 + 2) as usize <= MAX_RY {
                     level += 1;

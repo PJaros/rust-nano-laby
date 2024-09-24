@@ -1,4 +1,4 @@
 [wokwi]
 version = 1
-firmware = 'target/avr-atmega328p/release/rust-nano-walk.elf'
-elf = 'target/avr-atmega328p/release/rust-nano-walk.elf'
+firmware = 'target/avr-atmega328p/release/rust-nano-laby.elf'
+elf = 'target/avr-atmega328p/release/rust-nano-laby.elf'

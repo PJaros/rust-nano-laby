@@ -1,4 +1,7 @@
+use core::convert::Infallible;
+use arduino_hal::prelude::*;
 use rand::Rng;
+use ufmt::uWrite;
 
 pub const MAX_RX: usize = 35;
 pub const MAX_RY: usize = 35;
@@ -9,7 +12,7 @@ pub struct Laby {
     pub size_x: isize,
     pub size_y: isize,
     pub real_x: isize,
-    pub _real_y: isize,
+    pub real_y: isize,
     arr: [u8; MAX_ARR_SIZE],
     pub dirs: [isize; 4],
     // max_used_jump: i32,
@@ -24,7 +27,7 @@ impl Laby {
             size_x,
             size_y,
             real_x,
-            _real_y: real_y,
+            real_y: real_y,
             arr: [0; MAX_ARR_SIZE],
             dirs: [-real_x, -1_isize, 1_isize, real_x],
             // max_used_jump: 0,
@@ -38,7 +41,7 @@ impl Laby {
         self.size_x = size_x;
         self.size_y = size_y;
         self.real_x = real_x;
-        self._real_y = real_y;
+        self.real_y = real_y;
         for i in 0..MAX_ARR_SIZE {
             self.arr[i] = 0;
         }
@@ -130,48 +133,40 @@ impl Laby {
         let pos = self.size_x - 1 + self.real_x * self.size_y;
         self.set_0(pos as usize);
     }
-}
 
-// somehow utf-8 can't be displayed
-// impl core::fmt::uDisplay for Laby {
-// impl core::fmt::Display for Laby {
-//     fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-//         let mut s: String<MAX_STR_SIZE> = String::new();
-//         let mut dxy = [0_u8; 4];
-//         let mut count = 0;
-//         for y in (1..self.size_y + 1).step_by(2) {
-//             for x in (1..self.size_x + 1).step_by(2) {
-//                 let pos = (x + y * self.real_x) as isize;
-//                 for i in 0..self.dirs.len() {
-//                     dxy[i] = self.arr[(pos + self.dirs[i]) as usize];
-//                 }
-//                 let c = match dxy {
-//                     [0, 0, 0, 0] => ' ',
-//                     [0, 0, 0, _] => '╷',
-//                     [0, 0, _, 0] => '╶',
-//                     [0, 0, _, _] => '┌',
-//                     [0, _, 0, 0] => '╴',
-//                     [0, _, 0, _] => '┐',
-//                     [0, _, _, 0] => '─',
-//                     [0, _, _, _] => '┬',
-//                     [_, 0, 0, 0] => '╵',
-//                     [_, 0, 0, _] => '│',
-//                     [_, 0, _, 0] => '└',
-//                     [_, 0, _, _] => '├',
-//                     [_, _, 0, 0] => '┘',
-//                     [_, _, 0, _] => '┤',
-//                     [_, _, _, 0] => '┴',
-//                     [_, _, _, _] => '┼',
-//                 };
-//                 count += 1;
-//                 s.push(c).unwrap();
-//             }
-//             s.push('\r').unwrap();
-//             s.push('\n').unwrap();
-//             count += 2;
-//         }
-//         write!(f, "Laby, real: {}x{}, size: {}x{}, count: {}, MAX_STR_SIZE: {}\r\n{}", 
-//             self.real_x, self.real_y, self.size_x, self.size_y, count, MAX_STR_SIZE, s
-//         )
-//     }
-// }
+    pub fn print<U: uWrite>(self: &Laby, serial: &mut U) where U: uWrite<Error = Infallible>{
+        let mut dxy: [u8; 4] = [0_u8; 4];
+        for y in (1..self.size_y + 1).step_by(2) {
+            for x in (1..self.size_x + 1).step_by(2) {
+                let pos = (x + y * self.real_x) as isize;
+                for i in 0..self.dirs.len() {
+                    let look_pos = (pos + self.dirs[i]) as usize;
+                    dxy[i] = match self.read(look_pos) {
+                        true => 1,
+                        false => 0,
+                    }
+                }
+                let c = match dxy {
+                    [0, 0, 0, 0] => " ",
+                    [0, 0, 0, _] => "╷",
+                    [0, 0, _, 0] => "╶",
+                    [0, 0, _, _] => "┌",
+                    [0, _, 0, 0] => "╴",
+                    [0, _, 0, _] => "┐",
+                    [0, _, _, 0] => "─",
+                    [0, _, _, _] => "┬",
+                    [_, 0, 0, 0] => "╵",
+                    [_, 0, 0, _] => "│",
+                    [_, 0, _, 0] => "└",
+                    [_, 0, _, _] => "├",
+                    [_, _, 0, 0] => "┘",
+                    [_, _, 0, _] => "┤",
+                    [_, _, _, 0] => "┴",
+                    [_, _, _, _] => "┼",
+                };
+                ufmt::uwrite!(serial, "{}", c).unwrap_infallible();
+            }
+            ufmt::uwriteln!(serial, "\r").unwrap_infallible();
+        }
+    }    
+}
