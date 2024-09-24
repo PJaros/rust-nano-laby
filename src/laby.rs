@@ -141,7 +141,7 @@ impl Laby {
         let mut dxy: [u8; 4] = [0_u8; 4];
         for y in (1..self.size_y + 1).step_by(2) {
             for x in (1..self.size_x + 1).step_by(2) {
-                let pos = (x + y * self.real_x);
+                let pos = x + y * self.real_x;
                 for i in 0..self.dirs.len() {
                     let look_pos = (pos + self.dirs[i]) as usize;
                     dxy[i] = match self.read(look_pos) {

@@ -200,7 +200,7 @@ fn main() -> ! {
         wall_e: false,
         wall_s: false,
     };
-    let mut led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
+    let led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
     set_wall(&li, &pos, &mut w);
     led_show_wall(led_arr, &mut w);
     let mut last_pressed_buttons = ButtonState {
