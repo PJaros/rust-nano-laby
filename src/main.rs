@@ -202,7 +202,7 @@ fn main() -> ! {
     };
     let mut led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
     set_wall(&li, &pos, &mut w);
-    led_show_wall(&mut led_arr, &mut w);
+    led_show_wall(led_arr, &mut w);
     let mut last_pressed_buttons = ButtonState {
         btn_n: false,
         btn_w: false,
@@ -223,23 +223,23 @@ fn main() -> ! {
             btn_s: btn_s.is_low(),
             // btn_reset: btn_reset.is_low(),
         };
-        if  buttons.btn_n == true ||
-            buttons.btn_w == true ||
-            buttons.btn_e == true ||
-            buttons.btn_s == true {
+        if  buttons.btn_n ||
+            buttons.btn_w ||
+            buttons.btn_e ||
+            buttons.btn_s {
               last_pressed_buttons = buttons;
               buttons_were_pressed = true;
-        } else if buttons_were_pressed == true {
+        } else if buttons_were_pressed {
             // led_all(&mut led_arr, false);
 
-            if      last_pressed_buttons.btn_n == true && w.wall_n == false {pos += 2 * li.dirs[0];}
-            else if last_pressed_buttons.btn_w == true && w.wall_w == false {pos += 2 * li.dirs[1];}
-            else if last_pressed_buttons.btn_e == true && w.wall_e == false {pos += 2 * li.dirs[2];}
-            else if last_pressed_buttons.btn_s == true && w.wall_s == false {pos += 2 * li.dirs[3];}
-            else if last_pressed_buttons.btn_n == true && w.wall_n == true  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_w == true && w.wall_w == true  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_e == true && w.wall_e == true  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_s == true && w.wall_s == true  {blink(led_arr, 2);}
+            if      last_pressed_buttons.btn_n && !w.wall_n {pos += 2 * li.dirs[0];}
+            else if last_pressed_buttons.btn_w && !w.wall_w {pos += 2 * li.dirs[1];}
+            else if last_pressed_buttons.btn_e && !w.wall_e {pos += 2 * li.dirs[2];}
+            else if last_pressed_buttons.btn_s && !w.wall_s {pos += 2 * li.dirs[3];}
+            else if last_pressed_buttons.btn_n && w.wall_n  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_w && w.wall_w  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_e && w.wall_e  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_s && w.wall_s  {blink(led_arr, 2);}
             // else if last_pressed_buttons.btn_reset == true                  {regenerate_laby_reset = true;}        
             buttons_were_pressed = false;
 
@@ -275,7 +275,7 @@ fn main() -> ! {
                 // regenerate_laby_reset = false;
             }
             set_wall(&li, &pos, &mut w);
-            led_show_wall(&mut led_arr, &mut w);
+            led_show_wall(led_arr, &mut w);
         }
         arduino_hal::delay_ms(50);
     }

@@ -27,7 +27,7 @@ impl Laby {
             size_x,
             size_y,
             real_x,
-            real_y: real_y,
+            real_y,
             arr: [0; MAX_ARR_SIZE],
             dirs: [-real_x, -1_isize, 1_isize, real_x],
             // max_used_jump: 0,
@@ -97,7 +97,7 @@ impl Laby {
                     let dir = self.dirs[i];
                     let look_pos = (pos + 2 * dir) as usize;
 
-                    if self.read(look_pos) == true {
+                    if self.read(look_pos) {
                         avai_dir[avai_found] = dir;
                         avai_found += 1;
                     }
@@ -141,7 +141,7 @@ impl Laby {
         let mut dxy: [u8; 4] = [0_u8; 4];
         for y in (1..self.size_y + 1).step_by(2) {
             for x in (1..self.size_x + 1).step_by(2) {
-                let pos = (x + y * self.real_x) as isize;
+                let pos = (x + y * self.real_x);
                 for i in 0..self.dirs.len() {
                     let look_pos = (pos + self.dirs[i]) as usize;
                     dxy[i] = match self.read(look_pos) {
