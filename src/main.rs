@@ -150,7 +150,7 @@ fn main() -> ! {
     _ = adc.read_blocking(&adc::channel::Vbg);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
 
-    // Testing some variable types 
+    // Testing some variable types
     //
     // ufmt::uwriteln!(&mut serial, "Type: {}\r", _get_type_of(&mut serial)).unwrap_infallible();
     // ufmt::uwriteln!(&mut serial, "{}\r", _get_type_of(&mut MAX_POS_SIZE)).unwrap_infallible();
@@ -164,7 +164,7 @@ fn main() -> ! {
     let mut size_y = START_SIZE_Y;
     let mut li = Laby::new(size_x, size_y);
 
-    // Statistics: Running a few hundred labys and calculate the max and avg jump_pos. 
+    // Statistics: Running a few hundred labys and calculate the max and avg jump_pos.
     // Also some code to test the rng
     //
     // const TEST_NUM: usize = 500;
@@ -189,7 +189,7 @@ fn main() -> ! {
     //     container[c] += 1;
     // }
     // ufmt::uwriteln!(&mut serial, "0: {}, 1: {}, 2: {}\r", container[0], container[1], container[2], ).unwrap_infallible();
-    
+
     li.generate(&mut rng);
     li.print(&mut serial);
 

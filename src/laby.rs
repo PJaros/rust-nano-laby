@@ -1,5 +1,5 @@
-use core::convert::Infallible;
 use arduino_hal::prelude::*;
+use core::convert::Infallible;
 use rand::Rng;
 use ufmt::uWrite;
 
@@ -134,7 +134,10 @@ impl Laby {
         self.set_0(pos as usize);
     }
 
-    pub fn print<U: uWrite>(self: &Laby, serial: &mut U) where U: uWrite<Error = Infallible>{
+    pub fn print<U: uWrite>(self: &Laby, serial: &mut U)
+    where
+        U: uWrite<Error = Infallible>,
+    {
         let mut dxy: [u8; 4] = [0_u8; 4];
         for y in (1..self.size_y + 1).step_by(2) {
             for x in (1..self.size_x + 1).step_by(2) {
@@ -168,5 +171,5 @@ impl Laby {
             }
             ufmt::uwriteln!(serial, "\r").unwrap_infallible();
         }
-    }    
+    }
 }
