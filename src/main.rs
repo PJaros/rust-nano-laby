@@ -5,7 +5,12 @@
 use arduino_hal::prelude::*;
 
 use crate::ws2812::Ws2812;
-use arduino_hal::{adc, spi, port::Pin, port::mode::Output};
+use arduino_hal::{
+    adc,
+    port::mode::{Input, Output, PullUp},
+    port::Pin,
+    spi, Spi,
+};
 use smart_leds::{
     brightness,
     colors::{BLUE, CYAN, GREEN, MAGENTA, RED, YELLOW},
@@ -91,6 +96,12 @@ struct Wall {
     wall_e: bool,
     wall_s: bool,
 }
+struct Btn {
+    north: Pin<Input<PullUp>>,
+    east: Pin<Input<PullUp>>,
+    south: Pin<Input<PullUp>>,
+    west: Pin<Input<PullUp>>,
+}
 
 fn set_wall(li: &Laby, pos: &isize, w: &mut Wall) {
     w.wall_n = li.read((pos + li.dirs[0]) as usize);
@@ -145,16 +156,13 @@ fn main() -> ! {
     let mut led_w = pins.d6.into_output().downgrade();
     let mut led_e = pins.d9.into_output().downgrade();
     let mut led_s = pins.d8.into_output().downgrade();
-    let btn_n = pins.d2.into_pull_up_input();
-    let btn_w = pins.d3.into_pull_up_input();
-    let btn_e = pins.d4.into_pull_up_input();
-    let btn_s = pins.d5.into_pull_up_input();
 
-    let north = pins.d6.into_pull_up_input().downgrade();
-    let east = pins.d7.into_pull_up_input().downgrade();
-    let south = pins.d8.into_pull_up_input().downgrade();
-    let west = pins.d9.into_pull_up_input().downgrade();
-
+    let btn = Btn {
+        north: pins.d2.into_pull_up_input().downgrade(),
+        east: pins.d3.into_pull_up_input().downgrade(),
+        south: pins.d4.into_pull_up_input().downgrade(),
+        west: pins.d5.into_pull_up_input().downgrade(),
+    };
 
     // let btn_reset = pins.a2.into_pull_up_input().downgrade();
     let a_pin = pins.a0.into_analog_input(&mut adc);
@@ -167,7 +175,6 @@ fn main() -> ! {
     let settings = spi::Settings::default();
     let (spi, _) = spi::Spi::new(dp.SPI, sck, mosi, miso, cs, settings);
 
-    const NUM_LEDS: usize = 87;
     let mut ws = Ws2812::new(spi);
 
     // Run adc blocking read to ensure that arduino is ready
@@ -217,33 +224,9 @@ fn main() -> ! {
     li.generate(&mut rng);
     li.print(&mut serial);
 
-
-    
-    
-    if btn_n.is_low() || btn_w.is_low() || btn_e.is_low() || btn_s.is_low() {
-        let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
-        let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
-        
-        let mut pos: u8 = 0;
-        loop {
-            for i in 0_u8..(NUM_LEDS as u8) {
-                let color_index = (pos + i) as usize % colors.len();
-                data[i as usize] = colors[color_index];
-            }
-    
-            pos += 1;
-            if pos >= NUM_LEDS as u8 {
-                pos = 0;
-            }
-    
-            ws.write(brightness(data.iter().cloned(), 25)).unwrap();
-            arduino_hal::delay_ms(500);
-        }
+    if btn.north.is_low() || btn.west.is_low() || btn.east.is_low() || btn.south.is_low() {
+        find_btn_orientation(&btn, &mut ws);
     }
-
-
-
-
 
     let mut pos: isize = 2 + 2 * li.real_x;
     let mut w = Wall {
@@ -269,10 +252,10 @@ fn main() -> ! {
     #[rustfmt::skip]
     loop {    
         let buttons = ButtonState {
-            btn_n: btn_n.is_low(),
-            btn_w: btn_w.is_low(),
-            btn_e: btn_e.is_low(),
-            btn_s: btn_s.is_low(),
+            btn_n: btn.north.is_low(),
+            btn_w: btn.west.is_low(),
+            btn_e: btn.east.is_low(),
+            btn_s: btn.south.is_low(),
             // btn_reset: btn_reset.is_low(),
         };
         if  buttons.btn_n ||
@@ -330,5 +313,45 @@ fn main() -> ! {
             led_show_wall(led_arr, &mut w);
         }
         arduino_hal::delay_ms(50);
+    }
+}
+
+fn off_if_low(button: &Pin<Input<PullUp>>, leds: &mut [RGB8], (from, to): (usize, usize)) {
+    if button.is_low() {
+        for i in from..to {
+            leds[i] = RGB8::default();
+        }
+    }
+}
+
+fn find_btn_orientation(btn: &Btn, ws: &mut Ws2812<Spi>) -> ! {
+    const NUM_LEDS: usize = 87;
+    const PIXEL_N: (usize, usize) = (0, 18);
+    const PIXEL_E: (usize, usize) = (23, 41);
+    const PIXEL_S: (usize, usize) = (46, 64);
+    const PIXEL_W: (usize, usize) = (69, 87);
+
+    let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
+    let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
+
+    let mut pos: u8 = 0;
+    loop {
+        for i in 0_u8..(NUM_LEDS as u8) {
+            let color_index = (pos + i) as usize % colors.len();
+            data[i as usize] = colors[color_index];
+        }
+
+        pos += 1;
+        if pos >= NUM_LEDS as u8 {
+            pos = 0;
+        }
+
+        off_if_low(&btn.north, &mut data, PIXEL_N);
+        off_if_low(&btn.east, &mut data, PIXEL_E);
+        off_if_low(&btn.south, &mut data, PIXEL_S);
+        off_if_low(&btn.west, &mut data, PIXEL_W);
+
+        ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+        arduino_hal::delay_ms(500);
     }
 }
