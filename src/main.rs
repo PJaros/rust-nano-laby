@@ -418,16 +418,10 @@ fn ws_celebrate(ws: &mut Ws2812<Spi>) {
     let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
     let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
 
-    let mut pos: u8 = 0;
-    for _ in 0..25 {
-        for i in 0_u8..(NUM_LEDS as u8) {
-            let color_index = (pos + i) as usize % colors.len();
-            data[i as usize] = colors[color_index];
-        }
-
-        pos += 1;
-        if pos >= NUM_LEDS as u8 {
-            pos = 0;
+    for pos in 0..colors.len() {
+        for i in 0..NUM_LEDS {
+            let color_index = pos + i % colors.len();
+            data[i] = colors[color_index];
         }
 
         ws.write(brightness(data.iter().cloned(), 25)).unwrap();
