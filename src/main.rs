@@ -2,10 +2,16 @@
 #![no_main]
 #![feature(stmt_expr_attributes)]
 
-use arduino_hal::adc;
-use arduino_hal::port::mode::Output;
-use arduino_hal::port::Pin;
 use arduino_hal::prelude::*;
+
+use crate::ws2812::Ws2812;
+use arduino_hal::{adc, spi, port::Pin, port::mode::Output};
+use smart_leds::{
+    brightness,
+    colors::{BLUE, CYAN, GREEN, MAGENTA, RED, YELLOW},
+    SmartLedsWrite, RGB8,
+};
+use ws2812_spi as ws2812;
 
 // Commands:
 // Build: RAVEDUDE_PORT=/dev/ttyUSB0 cargo build --release
@@ -143,8 +149,26 @@ fn main() -> ! {
     let btn_w = pins.d3.into_pull_up_input();
     let btn_e = pins.d4.into_pull_up_input();
     let btn_s = pins.d5.into_pull_up_input();
+
+    let north = pins.d6.into_pull_up_input().downgrade();
+    let east = pins.d7.into_pull_up_input().downgrade();
+    let south = pins.d8.into_pull_up_input().downgrade();
+    let west = pins.d9.into_pull_up_input().downgrade();
+
+
     // let btn_reset = pins.a2.into_pull_up_input().downgrade();
     let a_pin = pins.a0.into_analog_input(&mut adc);
+
+    // pins and stuff used to control ws2812 LEDs
+    let sck = pins.d13.into_output();
+    let mosi = pins.d11.into_output();
+    let miso = pins.d12.into_pull_up_input();
+    let cs = pins.d10.into_output();
+    let settings = spi::Settings::default();
+    let (spi, _) = spi::Spi::new(dp.SPI, sck, mosi, miso, cs, settings);
+
+    const NUM_LEDS: usize = 87;
+    let mut ws = Ws2812::new(spi);
 
     // Run adc blocking read to ensure that arduino is ready
     _ = adc.read_blocking(&adc::channel::Vbg);
@@ -192,6 +216,34 @@ fn main() -> ! {
 
     li.generate(&mut rng);
     li.print(&mut serial);
+
+
+    
+    
+    if btn_n.is_low() || btn_w.is_low() || btn_e.is_low() || btn_s.is_low() {
+        let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
+        let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
+        
+        let mut pos: u8 = 0;
+        loop {
+            for i in 0_u8..(NUM_LEDS as u8) {
+                let color_index = (pos + i) as usize % colors.len();
+                data[i as usize] = colors[color_index];
+            }
+    
+            pos += 1;
+            if pos >= NUM_LEDS as u8 {
+                pos = 0;
+            }
+    
+            ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+            arduino_hal::delay_ms(500);
+        }
+    }
+
+
+
+
 
     let mut pos: isize = 2 + 2 * li.real_x;
     let mut w = Wall {
