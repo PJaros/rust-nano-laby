@@ -7,7 +7,7 @@ use arduino_hal::prelude::*;
 use crate::ws2812::Ws2812;
 use arduino_hal::{
     adc,
-    port::mode::{Input, Output, PullUp},
+    port::mode::{Input, PullUp},
     port::Pin,
     spi, Spi,
 };
@@ -103,6 +103,12 @@ struct Btn {
     west: Pin<Input<PullUp>>,
 }
 
+const NUM_LEDS: usize = 87;
+const PIXEL_N: (usize, usize) = (0, 18);
+const PIXEL_E: (usize, usize) = (23, 41);
+const PIXEL_S: (usize, usize) = (46, 64);
+const PIXEL_W: (usize, usize) = (69, 87);
+
 fn set_wall(li: &Laby, pos: &isize, w: &mut Wall) {
     w.wall_n = li.read((pos + li.dirs[0]) as usize);
     w.wall_w = li.read((pos + li.dirs[1]) as usize);
@@ -110,35 +116,35 @@ fn set_wall(li: &Laby, pos: &isize, w: &mut Wall) {
     w.wall_s = li.read((pos + li.dirs[3]) as usize);
 }
 
-fn led_show_wall(leds: &mut [&mut Pin<Output>; 4], w: &mut Wall) {
-    led_set_state(leds[0], w.wall_n);
-    led_set_state(leds[1], w.wall_w);
-    led_set_state(leds[2], w.wall_e);
-    led_set_state(leds[3], w.wall_s);
-}
+// fn led_show_wall(leds: &mut [&mut Pin<Output>; 4], w: &mut Wall) {
+//     led_set_state(leds[0], w.wall_n);
+//     led_set_state(leds[1], w.wall_w);
+//     led_set_state(leds[2], w.wall_e);
+//     led_set_state(leds[3], w.wall_s);
+// }
 
-fn blink(leds: &mut [&mut Pin<Output>; 4], num: usize) {
-    for _ in 0..num {
-        for state in [true, false] {
-            led_all(leds, state);
-            arduino_hal::delay_ms(100);
-        }
-    }
-}
+// fn blink(leds: &mut [&mut Pin<Output>; 4], num: usize) {
+//     for _ in 0..num {
+//         for state in [true, false] {
+//             led_all(leds, state);
+//             arduino_hal::delay_ms(100);
+//         }
+//     }
+// }
 
-fn led_all(leds: &mut [&mut Pin<Output>; 4], state: bool) {
-    for l in leds {
-        led_set_state(l, state);
-    }
-}
+// fn led_all(leds: &mut [&mut Pin<Output>; 4], state: bool) {
+//     for l in leds {
+//         led_set_state(l, state);
+//     }
+// }
 
-#[rustfmt::skip]
-fn led_set_state(l: &mut Pin<Output>, state: bool) {
-    match state {
-        false => {l.set_low();},
-        true => {l.set_high();}
-    }
-}
+// #[rustfmt::skip]
+// fn led_set_state(l: &mut Pin<Output>, state: bool) {
+//     match state {
+//         false => {l.set_low();},
+//         true => {l.set_high();}
+//     }
+// }
 
 #[rustfmt::skip]
 fn _get_type_of<T>(_: &T) -> &'static str where T: ?Sized, {
@@ -152,10 +158,10 @@ fn main() -> ! {
     let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
     let mut adc = arduino_hal::Adc::new(dp.ADC, Default::default());
 
-    let mut led_n = pins.d7.into_output().downgrade();
-    let mut led_w = pins.d6.into_output().downgrade();
-    let mut led_e = pins.d9.into_output().downgrade();
-    let mut led_s = pins.d8.into_output().downgrade();
+    // let mut led_n = pins.d7.into_output().downgrade();
+    // let mut led_w = pins.d6.into_output().downgrade();
+    // let mut led_e = pins.d9.into_output().downgrade();
+    // let mut led_s = pins.d8.into_output().downgrade();
 
     let btn = Btn {
         north: pins.d2.into_pull_up_input().downgrade(),
@@ -228,16 +234,20 @@ fn main() -> ! {
         find_btn_orientation(&btn, &mut ws);
     }
 
+    ws_celebrate(&mut ws);
+
     let mut pos: isize = 2 + 2 * li.real_x;
-    let mut w = Wall {
+    let mut wall_state = Wall {
         wall_n: false,
         wall_w: false,
         wall_e: false,
         wall_s: false,
     };
-    let led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
-    set_wall(&li, &pos, &mut w);
-    led_show_wall(led_arr, &mut w);
+    // let led_arr = &mut [&mut led_n, &mut led_w, &mut led_e, &mut led_s];
+    set_wall(&li, &pos, &mut wall_state);
+    // led_show_wall(led_arr, &wall_state);
+    ws_show_walls(&mut ws, &wall_state);
+
     let mut last_pressed_buttons = ButtonState {
         btn_n: false,
         btn_w: false,
@@ -267,14 +277,14 @@ fn main() -> ! {
         } else if buttons_were_pressed {
             // led_all(&mut led_arr, false);
 
-            if      last_pressed_buttons.btn_n && !w.wall_n {pos += 2 * li.dirs[0];}
-            else if last_pressed_buttons.btn_w && !w.wall_w {pos += 2 * li.dirs[1];}
-            else if last_pressed_buttons.btn_e && !w.wall_e {pos += 2 * li.dirs[2];}
-            else if last_pressed_buttons.btn_s && !w.wall_s {pos += 2 * li.dirs[3];}
-            else if last_pressed_buttons.btn_n && w.wall_n  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_w && w.wall_w  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_e && w.wall_e  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_s && w.wall_s  {blink(led_arr, 2);}
+            if      last_pressed_buttons.btn_n && !wall_state.wall_n {pos += 2 * li.dirs[0];}
+            else if last_pressed_buttons.btn_w && !wall_state.wall_w {pos += 2 * li.dirs[1];}
+            else if last_pressed_buttons.btn_e && !wall_state.wall_e {pos += 2 * li.dirs[2];}
+            else if last_pressed_buttons.btn_s && !wall_state.wall_s {pos += 2 * li.dirs[3];}
+            else if last_pressed_buttons.btn_n && wall_state.wall_n  {ws_blink_wall(&mut ws, &wall_state, PIXEL_N);}
+            else if last_pressed_buttons.btn_w && wall_state.wall_w  {ws_blink_wall(&mut ws, &wall_state, PIXEL_W);}
+            else if last_pressed_buttons.btn_e && wall_state.wall_e  {ws_blink_wall(&mut ws, &wall_state, PIXEL_E);}
+            else if last_pressed_buttons.btn_s && wall_state.wall_s  {ws_blink_wall(&mut ws, &wall_state, PIXEL_S);}
             // else if last_pressed_buttons.btn_reset == true                  {regenerate_laby_reset = true;}        
             buttons_were_pressed = false;
 
@@ -304,13 +314,14 @@ fn main() -> ! {
                 //     ufmt::uwriteln!(&mut serial, "Reset to Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
                 // }
                 pos = 2 + 2 * li.real_x;
-                blink(led_arr, 4);
+                ws_celebrate(&mut ws);
                 li.generate(&mut rng);
                 regenerate_laby_next_lvl = false;
                 // regenerate_laby_reset = false;
             }
-            set_wall(&li, &pos, &mut w);
-            led_show_wall(led_arr, &mut w);
+            set_wall(&li, &pos, &mut wall_state);
+            ws_show_walls(&mut ws, &wall_state);
+            // led_show_wall(led_arr, &mut wall_state);
         }
         arduino_hal::delay_ms(50);
     }
@@ -325,12 +336,6 @@ fn off_if_low(button: &Pin<Input<PullUp>>, leds: &mut [RGB8], (from, to): (usize
 }
 
 fn find_btn_orientation(btn: &Btn, ws: &mut Ws2812<Spi>) -> ! {
-    const NUM_LEDS: usize = 87;
-    const PIXEL_N: (usize, usize) = (0, 18);
-    const PIXEL_E: (usize, usize) = (23, 41);
-    const PIXEL_S: (usize, usize) = (46, 64);
-    const PIXEL_W: (usize, usize) = (69, 87);
-
     let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
     let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
 
@@ -353,5 +358,79 @@ fn find_btn_orientation(btn: &Btn, ws: &mut Ws2812<Spi>) -> ! {
 
         ws.write(brightness(data.iter().cloned(), 25)).unwrap();
         arduino_hal::delay_ms(500);
+    }
+}
+
+fn green_walls(state: &Wall, data: &mut [RGB8]) {
+    if state.wall_n {
+        for i in PIXEL_N.0..PIXEL_N.1 {
+            data[i] = GREEN;
+        }
+    }
+    if state.wall_e {
+        for i in PIXEL_E.0..PIXEL_E.1 {
+            data[i] = GREEN;
+        }
+    }
+    if state.wall_s {
+        for i in PIXEL_S.0..PIXEL_S.1 {
+            data[i] = GREEN;
+        }
+    }
+    if state.wall_w {
+        for i in PIXEL_W.0..PIXEL_W.1 {
+            data[i] = GREEN;
+        }
+    }
+}
+
+fn ws_show_walls(ws: &mut Ws2812<Spi>, state: &Wall) {
+    let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
+    green_walls(&state, &mut data);
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+}
+
+fn ws_blink_wall(ws: &mut Ws2812<Spi>, state: &Wall, (from, to): (usize, usize)) {
+    let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
+
+    green_walls(&state, &mut data);
+    for i in from..to {
+        data[i] = RED;
+    }
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+    arduino_hal::delay_ms(100);
+
+    green_walls(&state, &mut data);
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+    arduino_hal::delay_ms(100);
+
+    for i in from..to {
+        data[i] = RED;
+    }
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+    arduino_hal::delay_ms(100);
+
+    green_walls(&state, &mut data);
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+}
+
+fn ws_celebrate(ws: &mut Ws2812<Spi>) {
+    let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
+    let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
+
+    let mut pos: u8 = 0;
+    for _ in 0..25 {
+        for i in 0_u8..(NUM_LEDS as u8) {
+            let color_index = (pos + i) as usize % colors.len();
+            data[i as usize] = colors[color_index];
+        }
+
+        pos += 1;
+        if pos >= NUM_LEDS as u8 {
+            pos = 0;
+        }
+
+        ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+        arduino_hal::delay_ms(250);
     }
 }
