@@ -2,6 +2,8 @@
 #![no_main]
 #![feature(stmt_expr_attributes)]
 
+use panic_halt as _;
+
 use arduino_hal::prelude::*;
 
 use crate::ws2812::Ws2812;
@@ -47,37 +49,37 @@ use rand::rngs::SmallRng;
 use rand::SeedableRng;
 
 // Panic handler from https://github.com/Rahix/avr-hal/blob/main/examples/arduino-nano/src/bin/nano-panic.rs
-#[cfg(not(doc))]
-#[panic_handler]
-fn panic(info: &core::panic::PanicInfo) -> ! {
-    avr_device::interrupt::disable();
+// #[cfg(not(doc))]
+// #[panic_handler]
+// fn panic(info: &core::panic::PanicInfo) -> ! {
+//     avr_device::interrupt::disable();
 
-    // Get the peripherals so we can access serial and the LED.
-    // Because the interrupt is disabled and main has called and main is in panic, we know this is safe.
-    let dp = unsafe { arduino_hal::Peripherals::steal() };
-    let pins = arduino_hal::pins!(dp);
-    let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
+//     // Get the peripherals so we can access serial and the LED.
+//     // Because the interrupt is disabled and main has called and main is in panic, we know this is safe.
+//     let dp = unsafe { arduino_hal::Peripherals::steal() };
+//     let pins = arduino_hal::pins!(dp);
+//     let mut serial = arduino_hal::default_serial!(dp, pins, 57600);
 
-    // Print out panic location
-    ufmt::uwriteln!(&mut serial, "Firmware panic!\r").unwrap_infallible();
-    if let Some(loc) = info.location() {
-        ufmt::uwriteln!(
-            &mut serial,
-            "  At {}:{}:{}\r",
-            loc.file(),
-            loc.line(),
-            loc.column(),
-        )
-        .unwrap_infallible();
-    }
+//     // Print out panic location
+//     ufmt::uwriteln!(&mut serial, "Firmware panic!\r").unwrap_infallible();
+//     if let Some(loc) = info.location() {
+//         ufmt::uwriteln!(
+//             &mut serial,
+//             "  At {}:{}:{}\r",
+//             loc.file(),
+//             loc.line(),
+//             loc.column(),
+//         )
+//         .unwrap_infallible();
+//     }
 
-    // Blink LED rapidly
-    let mut led = pins.d13.into_output();
-    loop {
-        led.toggle();
-        arduino_hal::delay_ms(100);
-    }
-}
+//     // Blink LED rapidly
+//     let mut led = pins.d13.into_output();
+//     loop {
+//         led.toggle();
+//         arduino_hal::delay_ms(100);
+//     }
+// }
 
 const START_SIZE_X: isize = 7;
 const START_SIZE_Y: isize = 7;
@@ -105,9 +107,9 @@ struct Btn {
 
 const NUM_LEDS: usize = 87;
 const PIXEL_N: (usize, usize) = (0, 18);
-const PIXEL_E: (usize, usize) = (23, 41);
+const PIXEL_W: (usize, usize) = (23, 41);
 const PIXEL_S: (usize, usize) = (46, 64);
-const PIXEL_W: (usize, usize) = (69, 87);
+const PIXEL_E: (usize, usize) = (69, 87);
 
 fn set_wall(li: &Laby, pos: &isize, w: &mut Wall) {
     w.wall_n = li.read((pos + li.dirs[0]) as usize);
@@ -416,15 +418,21 @@ fn ws_blink_wall(ws: &mut Ws2812<Spi>, state: &Wall, (from, to): (usize, usize))
 
 fn ws_celebrate(ws: &mut Ws2812<Spi>) {
     let mut data: [RGB8; NUM_LEDS] = [RGB8::default(); NUM_LEDS];
-    let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
+    // let colors = [RED, YELLOW, GREEN, CYAN, BLUE, MAGENTA];
 
-    for pos in 0..colors.len() {
-        for i in 0..NUM_LEDS {
-            let color_index = pos + i % colors.len();
-            data[i] = colors[color_index];
-        }
-
-        ws.write(brightness(data.iter().cloned(), 25)).unwrap();
-        arduino_hal::delay_ms(250);
+    for i in 0..NUM_LEDS {
+        data[i] = BLUE;
     }
+    ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+    arduino_hal::delay_ms(2000);
+
+    // for pos in 0..colors.len() {
+    //     for i in 0..NUM_LEDS {
+    //         let color_index = pos + i % colors.len();
+    //         data[i] = colors[color_index];
+    //     }
+
+    //     ws.write(brightness(data.iter().cloned(), 25)).unwrap();
+    //     arduino_hal::delay_ms(250);
+    // }
 }
