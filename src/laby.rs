@@ -134,7 +134,7 @@ impl Laby {
         self.set_0(pos as usize);
     }
 
-    pub fn print<U: uWrite>(self: &Laby, serial: &mut U)
+    pub fn print<U>(self: &Laby, serial: &mut U)
     where
         U: uWrite<Error = Infallible>,
     {
