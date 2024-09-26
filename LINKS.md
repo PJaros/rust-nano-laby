@@ -13,6 +13,7 @@ Information found in the web past searches and/or future investigations:
 ## Memory layout with emulation
 - Embedonomicon, QEMU: https://docs.rust-embedded.org/embedonomicon/memory-layout.html#testing-it
 - AVR System emulator, QEMU Project: https://qemu-project.gitlab.io/qemu/system/target-avr.html
+- Rahix, QEMU example: https://github.com/Rahix/avr-hal/discussions/280
 
 ## Arduino LED 
 - https://github.com/SIMULATAN/arduino-led-rs/tree/main
