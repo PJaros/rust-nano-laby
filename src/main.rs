@@ -124,6 +124,11 @@ fn main() -> ! {
     // let btn_reset = pins.a2.into_pull_up_input().downgrade();
     let a_pin = pins.a0.into_analog_input(&mut adc);
 
+    led_n.set_low();
+    led_w.set_low();
+    led_e.set_low();
+    led_e.set_low();
+
     // Run adc blocking read to ensure that arduino is ready
     _ = adc.read_blocking(&adc::channel::Vbg);
     ufmt::uwriteln!(&mut serial, "Hello Ruum42!\r").unwrap_infallible();
@@ -214,10 +219,10 @@ fn main() -> ! {
             else if last_pressed_buttons.btn_w && !w.wall_w {pos += 2 * li.dirs[1];}
             else if last_pressed_buttons.btn_e && !w.wall_e {pos += 2 * li.dirs[2];}
             else if last_pressed_buttons.btn_s && !w.wall_s {pos += 2 * li.dirs[3];}
-            else if last_pressed_buttons.btn_n && w.wall_n  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_w && w.wall_w  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_e && w.wall_e  {blink(led_arr, 2);}
-            else if last_pressed_buttons.btn_s && w.wall_s  {blink(led_arr, 2);}
+            else if last_pressed_buttons.btn_n && w.wall_n  {blink(led_arr, 3);}
+            else if last_pressed_buttons.btn_w && w.wall_w  {blink(led_arr, 3);}
+            else if last_pressed_buttons.btn_e && w.wall_e  {blink(led_arr, 3);}
+            else if last_pressed_buttons.btn_s && w.wall_s  {blink(led_arr, 3);}
             // else if last_pressed_buttons.btn_reset == true                  {regenerate_laby_reset = true;}        
             buttons_were_pressed = false;
 
@@ -247,7 +252,7 @@ fn main() -> ! {
                 //     ufmt::uwriteln!(&mut serial, "Reset to Level {}. Generating a labyrinth: {} x {}\r", level, size_x, size_y).unwrap_infallible();
                 // }
                 pos = 2 + 2 * li.real_x;
-                blink(led_arr, 4);
+                blink(led_arr, 10);
                 li.generate(&mut rng);
                 regenerate_laby_next_lvl = false;
                 // regenerate_laby_reset = false;
